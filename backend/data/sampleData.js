@@ -39,3 +39,11 @@ export const logisticsOptions = [
 ];
 
 export const grievances = [];
+
+const initialState = structuredClone({ cropLots, offers, transactions, grievances });
+
+export function resetDemoData() {
+  for (const [target, source] of [[cropLots, initialState.cropLots], [offers, initialState.offers], [transactions, initialState.transactions], [grievances, initialState.grievances]]) {
+    target.splice(0, target.length, ...structuredClone(source));
+  }
+}

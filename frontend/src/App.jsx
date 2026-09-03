@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Bell, Boxes, CircleDollarSign, Leaf, MapPin, Menu, PackagePlus, ShieldCheck, Sparkles, TrendingUp, Truck, Users } from 'lucide-react';
+import { ArrowRight, Bell, Boxes, CircleDollarSign, Leaf, MapPin, Menu, PackagePlus, ShieldCheck, Sparkles, TrendingUp, Truck, Users, CheckCircle2, Clock3, MessageSquareWarning } from 'lucide-react';
 import { api } from './services/api';
 import StatCard from './components/StatCard';
 import TrendChart from './components/TrendChart';
@@ -30,6 +30,11 @@ export default function App() {
   const [notice, setNotice] = useState('');
   const [showLotForm, setShowLotForm] = useState(false);
   const [activeNav, setActiveNav] = useState('Dashboard');
+  const [offers, setOffers] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [logistics, setLogistics] = useState([]);
+  const [selectedService, setSelectedService] = useState('');
+  const [grievanceText, setGrievanceText] = useState('');
 
   const loadDashboard = async () => {
     setLoading(true); setNotice('');
@@ -43,11 +48,22 @@ export default function App() {
   };
 
   useEffect(() => { loadDashboard(); }, []);
+  const refreshWorkflow = async () => {
+    try { const [nextOffers, nextTransactions, nextLogistics] = await Promise.all([api.getOffers(), api.getTransactions(), api.getLogistics()]); setOffers(nextOffers); setTransactions(nextTransactions); setLogistics(nextLogistics); } catch { /* The dashboard still has market-data fallback for offline demo mode. */ }
+  };
+  useEffect(() => { refreshWorkflow(); }, []);
   const createLot = async (lot) => {
-    try { await api.createLot(lot); setNotice('Crop lot published successfully. Verified buyers can now send offers.'); }
+    try { await api.createLot(lot); await refreshWorkflow(); setNotice('Crop lot published successfully. Verified buyers can now send offers.'); }
     catch { setNotice('Lot saved for the demo. Start the backend to persist it.'); }
     setShowLotForm(false);
   };
+  const acceptOffer = async (id) => { try { await api.acceptOffer(id); await refreshWorkflow(); setNotice('Offer accepted. Transaction and payment tracking have started.'); } catch (error) { setNotice(error.message || 'Could not accept this offer.'); } };
+  const moveTransaction = async (transaction) => {
+    const next = transaction.status === 'confirmed' ? 'pickup_scheduled' : transaction.status === 'pickup_scheduled' ? 'in_transit' : transaction.status === 'in_transit' ? 'delivered' : 'completed';
+    try { await api.updateTransaction(transaction.id, next); await refreshWorkflow(); setNotice(`Transaction updated: ${next.replace('_', ' ')}.`); } catch { setNotice('Could not update transaction status.'); }
+  };
+  const submitGrievance = async (event) => { event.preventDefault(); if (!grievanceText.trim()) return; try { await api.raiseGrievance(grievanceText); setGrievanceText(''); setNotice('Grievance raised successfully. Our support team will review it.'); } catch { setNotice('Could not raise grievance.'); } };
+  const resetDemo = async () => { try { await api.resetDemo(); await refreshWorkflow(); setSelectedService(''); setNotice('Demo data reset. Your pending buyer offer is ready again.'); } catch { setNotice('Could not reset demo data.'); } };
 
   const navigateTo = (item) => {
     setActiveNav(item);
@@ -59,7 +75,7 @@ export default function App() {
   const bestMarket = [...data.prices].sort((a, b) => b.modalPrice - a.modalPrice)[0];
   return <div className="app-shell">
     <aside className="sidebar"><div className="brand"><span className="brand-mark"><Leaf size={23}/></span><div><strong>KisanSetu</strong><small>Market intelligence</small></div></div><nav>{[{ label: 'Dashboard', icon: Boxes }, { label: 'Market prices', icon: TrendingUp }, { label: 'My crop lots', icon: PackagePlus }, { label: 'Buyer matches', icon: Users }, { label: 'Logistics', icon: Truck }, { label: 'Transactions', icon: CircleDollarSign }].map(({ label, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} onClick={() => navigateTo(label)}><Icon size={19}/>{label}</button>)}</nav><div className="sidebar-footer"><div className="profile-avatar">SP</div><div><strong>Sanjay Patil</strong><small>Farmer · Nashik</small></div></div></aside>
-    <main id="dashboard"><header className="topbar"><button className="mobile-menu" onClick={() => navigateTo('Dashboard')}><Menu/></button><div><p className="eyebrow">GOOD MORNING, SANJAY</p><h1>Make every harvest count.</h1></div><div className="top-actions"><button className="notification"><Bell size={20}/><i/></button><button className="help-button">Help centre</button></div></header>
+    <main id="dashboard"><header className="topbar"><button className="mobile-menu" onClick={() => navigateTo('Dashboard')}><Menu/></button><div><p className="eyebrow">GOOD MORNING, SANJAY</p><h1>Make every harvest count.</h1></div><div className="top-actions"><button className="notification" onClick={() => setNotice('You have one verified buyer offer waiting for review.')}><Bell size={20}/><i/></button><button className="help-button" onClick={resetDemo}>Reset demo</button></div></header>
       <section className="hero-card"><div><p className="eyebrow">SELL SMARTER WITH KISANSETU</p><h2>Find the right buyer at the right time.</h2><p>Compare nearby mandi rates, receive verified buyer offers and know your best selling window.</p><button className="light-button" onClick={() => setShowLotForm(true)}>Create crop lot <ArrowRight size={18}/></button></div><div className="hero-art"><div className="sun"/><div className="hill hill-one"/><div className="hill hill-two"/><span>🌾</span></div></section>
       <section className="search-panel"><div className="search-title"><Sparkles size={20}/><span>Check your selling opportunity</span></div><label>Crop<select value={filters.crop} onChange={(event) => setFilters({ ...filters, crop: event.target.value })}><option>Onion</option><option>Tomato</option><option>Soybean</option></select></label><label>Location<input value={filters.location} onChange={(event) => setFilters({ ...filters, location: event.target.value })}/></label><label>Quantity (q)<input type="number" value={filters.quantity} onChange={(event) => setFilters({ ...filters, quantity: event.target.value })}/></label><button className="primary-button" onClick={loadDashboard}>{loading ? 'Checking…' : 'Check prices'}</button></section>
       {notice && <div className="notice">{notice}</div>}
@@ -70,9 +86,12 @@ export default function App() {
       <section id="buyer-matches" className="section-header"><div><p className="eyebrow">VERIFIED DEMAND</p><h2>Buyers matched for you</h2></div><button className="text-button" onClick={() => navigateTo('Buyer matches')}>See all buyers <ArrowRight size={16}/></button></section>
       <section className="buyer-grid">{data.buyers.slice(0, 3).map((buyer) => <article className="buyer-card" key={buyer.id}><div className="buyer-top"><div className="buyer-logo">{buyer.companyName.slice(0, 1)}</div>{buyer.verified && <span className="verified"><ShieldCheck size={15}/> Verified</span>}</div><h3>{buyer.companyName}</h3><p><MapPin size={15}/>{buyer.location} · Needs {buyer.requiredQuantity} q</p><div className="buyer-bottom"><div><small>Target offer</small><strong>{formatPrice(buyer.targetPrice)}/q</strong></div><div><small>Trust score</small><strong>★ {buyer.reliabilityScore}</strong></div></div><button className="outline-button" onClick={() => setNotice(`${buyer.companyName} needs ${buyer.requiredQuantity} quintals and targets ${formatPrice(buyer.targetPrice)}/quintal.`)}>View requirement</button></article>)}</section>
       <section id="logistics" className="section-header"><div><p className="eyebrow">MOVE AND STORE</p><h2>Logistics options</h2></div></section>
-      <section className="service-grid"><article className="service-card"><Truck size={23}/><div><strong>Kisan Haul transport</strong><p>Nashik–Pune · Capacity 150 quintals</p></div><button className="outline-button" onClick={() => setNotice('Kisan Haul selected. The provider will be contacted after you accept a buyer offer.')}>Select</button></article><article className="service-card"><Boxes size={23}/><div><strong>Nashik Cold Store</strong><p>Storage available · ₹18 per quintal/day</p></div><button className="outline-button" onClick={() => setNotice('Nashik Cold Store saved as your preferred storage option.')}>Select</button></article></section>
+      <section className="service-grid">{(logistics.length ? logistics : [{ id: 'transport', provider: 'Kisan Haul', type: 'Transport', capacity: 150 }, { id: 'storage', provider: 'Nashik Cold Store', type: 'Storage', ratePerDay: 18 }]).map((service) => <article className="service-card" key={service.id}><Truck size={23}/><div><strong>{service.provider}</strong><p>{service.type} · {service.capacity ? `Capacity ${service.capacity} quintals` : `₹${service.ratePerDay} per quintal/day`}</p></div><button className="outline-button" onClick={() => { setSelectedService(service.provider); setNotice(`${service.provider} selected for your crop lot.`); }}>{selectedService === service.provider ? 'Selected' : 'Select'}</button></article>)}</section>
       <section id="transactions" className="section-header"><div><p className="eyebrow">ORDER STATUS</p><h2>Transactions</h2></div></section>
-      <section className="transaction-card"><div className="transaction-status">Pending offer</div><div><strong>Onion · 100 quintals</strong><p>FreshMart Foods offered ₹2,680 per quintal</p></div><button className="primary-button" onClick={() => setNotice('Offer accepted for the demo. Payment tracking will begin after pickup confirmation.')}>Accept offer</button></section>
+      {offers.filter((offer) => offer.status === 'pending').map((offer) => <section className="transaction-card" key={offer.id}><div className="transaction-status">Pending offer</div><div><strong>Crop lot · {offer.quantity} quintals</strong><p>Buyer offer: {formatPrice(offer.pricePerUnit)} per quintal · {offer.message}</p></div><button className="primary-button" onClick={() => acceptOffer(offer.id)}>Accept offer</button></section>)}
+      {transactions.map((transaction) => <section className="transaction-card" key={transaction.id}><div className="transaction-status"><CheckCircle2 size={13}/> {transaction.paymentStatus}</div><div><strong>{formatPrice(transaction.amount)} transaction</strong><p>{transaction.status.replaceAll('_', ' ')} · {selectedService || 'Select logistics above'}</p></div>{transaction.status !== 'completed' && <button className="primary-button" onClick={() => moveTransaction(transaction)}><Clock3 size={16}/> Next step</button>}</section>)}
+      {!offers.some((offer) => offer.status === 'pending') && !transactions.length && <section className="empty-state"><CheckCircle2 size={21}/><div><strong>No active offers yet</strong><p>Create a crop lot to start receiving buyer offers.</p></div></section>}
+      <section className="support-card"><MessageSquareWarning size={22}/><div><p className="eyebrow">NEED HELP?</p><h3>Raise a grievance</h3><p>Report an offer, logistics, quality, or payment issue.</p></div><form onSubmit={submitGrievance}><input value={grievanceText} onChange={(event) => setGrievanceText(event.target.value)} aria-label="Describe your concern" placeholder="Describe your concern"/><button className="outline-button">Submit</button></form></section>
     </main>
     {showLotForm && <LotModal crop={filters.crop} onClose={() => setShowLotForm(false)} onSave={createLot}/>} 
   </div>;

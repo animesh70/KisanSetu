@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { grievances, logisticsOptions, transactions } from '../data/sampleData.js';
+import { grievances, logisticsOptions, resetDemoData, transactions } from '../data/sampleData.js';
 
 const router = Router();
 router.get('/logistics', (req, res) => res.json(logisticsOptions));
@@ -17,4 +17,5 @@ router.post('/grievances', (req, res) => {
   grievances.push(item);
   res.status(201).json(item);
 });
+router.post('/demo/reset', (req, res) => { resetDemoData(); res.json({ message: 'Demo data reset.' }); });
 export default router;

@@ -13,5 +13,12 @@ export const api = {
   getRecommendation: ({ crop, quantity, grade }) => request(`/recommendations/sell?crop=${encodeURIComponent(crop)}&quantity=${quantity}&grade=${grade}`),
   getBuyers: () => request('/buyers'),
   getLots: () => request('/lots'),
-  createLot: (lot) => request('/lots', { method: 'POST', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify(lot) })
+  getOffers: () => request('/offers'),
+  getTransactions: () => request('/transactions'),
+  getLogistics: () => request('/logistics'),
+  createLot: (lot) => request('/lots', { method: 'POST', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify(lot) }),
+  acceptOffer: (id) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status: 'accepted' }) }),
+  updateTransaction: (id, status) => request(`/transactions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, paymentStatus: status === 'completed' ? 'paid' : 'pending' }) }),
+  raiseGrievance: (description) => request('/grievances', { method: 'POST', body: JSON.stringify({ category: 'Transaction support', description, raisedBy: 'farmer-1' }) }),
+  resetDemo: () => request('/demo/reset', { method: 'POST' })
 };
