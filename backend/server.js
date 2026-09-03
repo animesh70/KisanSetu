@@ -1,0 +1,27 @@
+import 'dotenv/config';
+import cors from 'cors';
+import express from 'express';
+import authRoutes from './routes/authRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import buyerRoutes from './routes/buyerRoutes.js';
+import lotRoutes from './routes/lotRoutes.js';
+import marketRoutes from './routes/marketRoutes.js';
+import matchRoutes from './routes/matchRoutes.js';
+import offerRoutes from './routes/offerRoutes.js';
+import supportRoutes from './routes/supportRoutes.js';
+
+const app = express();
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
+app.use(express.json());
+app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'KisanSetu API' }));
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/markets', marketRoutes);
+app.use('/api/lots', lotRoutes);
+app.use('/api/buyers', buyerRoutes);
+app.use('/api/matches', matchRoutes);
+app.use('/api/recommendations', matchRoutes);
+app.use('/api/offers', offerRoutes);
+app.use('/api', supportRoutes);
+app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
+app.listen(process.env.PORT || 5000, () => console.log(`KisanSetu API running on port ${process.env.PORT || 5000}`));

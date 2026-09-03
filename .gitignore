@@ -1,0 +1,14 @@
+# JavaScript dependencies and build output
+**/node_modules/
+frontend/dist/
+.npm-cache/
+
+# Local environment files
+**/.env
+!**/.env.example
+
+# Python runtime artifacts
+**/__pycache__/
+**/.venv/
+ml-service/.packages/
+ml-service/models/*.joblib
