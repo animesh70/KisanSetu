@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { offers, transactions } from '../data/sampleData.js';
+import { buyers, cropLots, offers, transactions } from '../data/sampleData.js';
 import { requireRole } from '../middleware/auth.js';
 
 const router = Router();
@@ -21,7 +21,9 @@ router.patch('/:id', requireRole('farmer', 'fpo'), (req, res) => {
   }
   if (offer.status === 'accepted') {
     if (transactions.some((item) => item.acceptedOfferId === offer.id)) return res.status(409).json({ message: 'A transaction already exists for this offer.' });
-    transactions.push({ id: `txn-${Date.now()}`, lotId: offer.lotId, acceptedOfferId: offer.id, farmerId: offer.farmerId, buyerId: offer.buyerId, amount: offer.pricePerUnit * offer.quantity, status: 'confirmed', paymentStatus: 'awaiting_delivery', paymentMethod: 'UPI / bank transfer (demo)', paymentReference: `KS-${Date.now().toString().slice(-6)}` });
+    const buyer = buyers.find((item) => item.id === offer.buyerId);
+    const lot = cropLots.find((item) => item.id === offer.lotId);
+    transactions.push({ id: `txn-${Date.now()}`, lotId: offer.lotId, acceptedOfferId: offer.id, farmerId: offer.farmerId, buyerId: offer.buyerId, buyerName: buyer?.companyName || 'Verified buyer', crop: lot?.crop || 'Crop lot', quantity: offer.quantity, amount: offer.pricePerUnit * offer.quantity, status: 'confirmed', paymentStatus: 'awaiting_delivery', paymentMethod: 'UPI / bank transfer (demo)', paymentReference: `KS-${Date.now().toString().slice(-6)}`, pickupWindow: 'Tomorrow, 10:00 AM – 2:00 PM (demo)', driverName: 'Ramesh Jadhav (demo)', driverPhone: '98220 01100', paymentDue: 'Within 24 hours of delivery (demo)', auditLog: [{ event: 'Offer accepted', at: new Date().toISOString() }] });
   }
   res.json(offer);
 });

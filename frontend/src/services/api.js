@@ -10,7 +10,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  getPrices: (crop, district = 'Nashik') => request(`/markets/prices?crop=${encodeURIComponent(crop)}&district=${encodeURIComponent(district)}`),
+  getPrices: (crop, district) => request(`/markets/prices?crop=${encodeURIComponent(crop)}${district ? `&district=${encodeURIComponent(district)}` : ''}`),
   getTrend: (crop) => request(`/markets/trends?crop=${encodeURIComponent(crop)}`),
   getForecast: (crop) => request(`/markets/forecast?crop=${encodeURIComponent(crop)}`),
   getRecommendation: ({ crop, quantity, grade }) => request(`/recommendations/sell?crop=${encodeURIComponent(crop)}&quantity=${quantity}&grade=${grade}`),
@@ -20,6 +20,8 @@ export const api = {
   getTransactions: () => request('/transactions'),
   getLogistics: () => request('/logistics'),
   createLot: (lot) => request('/lots', { method: 'POST', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify(lot) }),
+  updateLot: (id, changes) => request(`/lots/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify(changes) }),
+  deleteLot: (id) => request(`/lots/${id}`, { method: 'DELETE', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' } }),
   acceptOffer: (id) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status: 'accepted' }) }),
   respondToOffer: (id, status, counterPrice, message) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status, counterPrice, message }) }),
   updateTransaction: (id, status, paymentStatus) => request(`/transactions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(paymentStatus ? { paymentStatus } : {}) }) }),

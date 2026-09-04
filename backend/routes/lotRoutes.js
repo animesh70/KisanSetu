@@ -21,4 +21,21 @@ router.get('/:id', (req, res) => {
   if (!lot) return res.status(404).json({ message: 'Crop lot not found.' });
   res.json(lot);
 });
+router.patch('/:id', requireRole('farmer', 'fpo'), (req, res) => {
+  const lot = cropLots.find((item) => item.id === req.params.id);
+  if (!lot) return res.status(404).json({ message: 'Crop lot not found.' });
+  const allowed = ['variety', 'quantity', 'grade', 'askingPrice', 'location', 'harvestDate', 'status'];
+  for (const field of allowed) if (req.body[field] !== undefined) lot[field] = req.body[field];
+  lot.updatedAt = new Date().toISOString();
+  res.json(lot);
+});
+router.delete('/:id', requireRole('farmer', 'fpo'), (req, res) => {
+  const index = cropLots.findIndex((item) => item.id === req.params.id);
+  if (index < 0) return res.status(404).json({ message: 'Crop lot not found.' });
+  const lot = cropLots[index];
+  if (offers.some((offer) => offer.lotId === lot.id && offer.status === 'accepted')) return res.status(409).json({ message: 'A lot with an accepted offer cannot be deleted. It remains in transaction history.' });
+  cropLots.splice(index, 1);
+  for (let offerIndex = offers.length - 1; offerIndex >= 0; offerIndex -= 1) if (offers[offerIndex].lotId === lot.id) offers.splice(offerIndex, 1);
+  res.json({ message: 'Crop lot deleted.' });
+});
 export default router;
