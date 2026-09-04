@@ -18,9 +18,9 @@ export const trendByCrop = {
 };
 
 export const buyers = [
-  { id: 'buyer-1', companyName: 'FreshMart Foods', contactName: 'Riya Shah', verified: true, reliabilityScore: 4.8, location: 'Pune', crops: ['Onion', 'Tomato'], requiredGrade: 'A', requiredQuantity: 120, targetPrice: 2700, serviceArea: ['Nashik', 'Pune'] },
-  { id: 'buyer-2', companyName: 'MahaAgro Exports', contactName: 'Amit Kulkarni', verified: true, reliabilityScore: 4.6, location: 'Nashik', crops: ['Onion'], requiredGrade: 'A', requiredQuantity: 80, targetPrice: 2650, serviceArea: ['Nashik'] },
-  { id: 'buyer-3', companyName: 'Green Basket Retail', contactName: 'Neha Joshi', verified: true, reliabilityScore: 4.5, location: 'Mumbai', crops: ['Onion', 'Tomato'], requiredGrade: 'B', requiredQuantity: 50, targetPrice: 2550, serviceArea: ['Nashik', 'Mumbai'] }
+  { id: 'buyer-1', companyName: 'FreshMart Foods', contactName: 'Riya Shah', verified: true, reliabilityScore: 4.8, location: 'Pune', distanceKm: 185, crops: ['Onion', 'Tomato'], requiredGrade: 'A', requiredQuantity: 120, targetPrice: 2700, serviceArea: ['Nashik', 'Pune'] },
+  { id: 'buyer-2', companyName: 'MahaAgro Exports', contactName: 'Amit Kulkarni', verified: true, reliabilityScore: 4.6, location: 'Nashik', distanceKm: 32, crops: ['Onion'], requiredGrade: 'A', requiredQuantity: 80, targetPrice: 2650, serviceArea: ['Nashik'] },
+  { id: 'buyer-3', companyName: 'Green Basket Retail', contactName: 'Neha Joshi', verified: true, reliabilityScore: 4.5, location: 'Mumbai', distanceKm: 175, crops: ['Onion', 'Tomato'], requiredGrade: 'B', requiredQuantity: 50, targetPrice: 2550, serviceArea: ['Nashik', 'Mumbai'] }
 ];
 
 export const cropLots = [
