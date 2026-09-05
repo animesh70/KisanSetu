@@ -1,4 +1,4 @@
-import { mandiPrices, trendByCrop } from '../data/sampleData.js';
+import { mandiPrices, onlineStorePrices, trendByCrop } from '../data/sampleData.js';
 
 export function getPrices({ crop, district }) {
   return mandiPrices.filter((price) =>
@@ -21,6 +21,15 @@ function getDemoForecast(crop = 'Onion') {
     predictedPrice: Math.round(last + slope * (index + 1))
   }));
   return { crop, currentPrice: last, forecast, predictedPeak: Math.max(...forecast.map((item) => item.predictedPrice)) };
+}
+
+export function getComparison() {
+  return Object.keys(trendByCrop).map((crop) => {
+    const records = mandiPrices.filter((price) => price.crop === crop);
+    const mandiPrice = records.length ? Math.round(records.reduce((sum, price) => sum + price.modalPrice, 0) / records.length) : 0;
+    const online = onlineStorePrices.find((item) => item.crop === crop);
+    return { crop, mandiPrice, onlinePrice: online?.price || 0, platform: online?.platform || 'Online Store' };
+  });
 }
 
 export async function getForecast(crop = 'Onion') {

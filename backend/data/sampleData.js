@@ -18,9 +18,9 @@ export const trendByCrop = {
 };
 
 export const buyers = [
-  { id: 'buyer-1', companyName: 'FreshMart Foods', contactName: 'Riya Shah', verified: true, reliabilityScore: 4.8, location: 'Pune', crops: ['Onion', 'Tomato'], requiredGrade: 'A', requiredQuantity: 120, targetPrice: 2700, serviceArea: ['Nashik', 'Pune'] },
-  { id: 'buyer-2', companyName: 'MahaAgro Exports', contactName: 'Amit Kulkarni', verified: true, reliabilityScore: 4.6, location: 'Nashik', crops: ['Onion'], requiredGrade: 'A', requiredQuantity: 80, targetPrice: 2650, serviceArea: ['Nashik'] },
-  { id: 'buyer-3', companyName: 'Green Basket Retail', contactName: 'Neha Joshi', verified: true, reliabilityScore: 4.5, location: 'Mumbai', crops: ['Onion', 'Tomato'], requiredGrade: 'B', requiredQuantity: 50, targetPrice: 2550, serviceArea: ['Nashik', 'Mumbai'] }
+  { id: 'buyer-1', companyName: 'FreshMart Foods', contactName: 'Riya Shah', verified: true, reliabilityScore: 4.8, location: 'Pune', distanceKm: 185, crops: ['Onion', 'Tomato'], requiredGrade: 'A', requiredQuantity: 120, targetPrice: 2700, serviceArea: ['Nashik', 'Pune'] },
+  { id: 'buyer-2', companyName: 'MahaAgro Exports', contactName: 'Amit Kulkarni', verified: true, reliabilityScore: 4.6, location: 'Nashik', distanceKm: 32, crops: ['Onion'], requiredGrade: 'A', requiredQuantity: 80, targetPrice: 2650, serviceArea: ['Nashik'] },
+  { id: 'buyer-3', companyName: 'Green Basket Retail', contactName: 'Neha Joshi', verified: true, reliabilityScore: 4.5, location: 'Mumbai', distanceKm: 175, crops: ['Onion', 'Tomato'], requiredGrade: 'B', requiredQuantity: 50, targetPrice: 2550, serviceArea: ['Nashik', 'Mumbai'] }
 ];
 
 export const cropLots = [
@@ -40,29 +40,48 @@ export const logisticsOptions = [
 
 export const grievances = [];
 
-const initialState = structuredClone({ cropLots, offers, transactions, grievances });
-
-export function resetDemoData() {
-  for (const [target, source] of [[cropLots, initialState.cropLots], [offers, initialState.offers], [transactions, initialState.transactions], [grievances, initialState.grievances]]) {
-    target.splice(0, target.length, ...structuredClone(source));
+export const banks = [
+  {
+    id: 'sbi',
+    name: 'State Bank of India',
+    type: 'Public sector bank',
+    schemes: [
+      { id: 'sbi-kcc', name: 'Kisan Credit Card', category: 'crop', interestRate: 7.0, maxAmount: 300000, minIncome: 0, tenureMonths: 12, processingFee: '0.35%' },
+      { id: 'sbi-agri-term', name: 'SBI Agri Business Term Loan', category: 'business', interestRate: 9.5, maxAmount: 2000000, minIncome: 150000, tenureMonths: 60, processingFee: '1%' }
+    ]
+  },
+  {
+    id: 'axis',
+    name: 'Axis Bank',
+    type: 'Private bank',
+    schemes: [
+      { id: 'axis-kisan', name: 'Axis Kisan Power Loan', category: 'crop', interestRate: 8.5, maxAmount: 500000, minIncome: 0, tenureMonths: 24, processingFee: '0.5%' },
+      { id: 'axis-agri-biz', name: 'Axis Agri Business Loan', category: 'business', interestRate: 11, maxAmount: 5000000, minIncome: 300000, tenureMonths: 84, processingFee: '1.25%' }
+    ]
+  },
+  {
+    id: 'other',
+    name: 'Other Banks (RRB / Cooperative, NABARD-linked)',
+    type: 'Regional rural & cooperative banks',
+    schemes: [
+      { id: 'other-crop', name: 'NABARD Refinanced Crop Loan', category: 'crop', interestRate: 7.0, maxAmount: 160000, minIncome: 0, tenureMonths: 12, processingFee: '0.25%' },
+      { id: 'other-microbiz', name: 'Rural Micro-Business Loan', category: 'business', interestRate: 10.5, maxAmount: 1000000, minIncome: 100000, tenureMonths: 48, processingFee: '0.75%' }
+    ]
   }
-}
-
-export const loanBanks = [
-  { id: 'sbi', name: 'State Bank of India', shortName: 'SBI', type: 'Bank', focus: 'Kisan & business finance', maxAmount: 2500000, note: 'Suitable for crop and small business funding.' },
-  { id: 'axis', name: 'Axis Bank', shortName: 'Axis', type: 'Bank', focus: 'Agri & business loans', maxAmount: 3000000, note: 'Suitable for established businesses and agri enterprises.' },
-  { id: 'other', name: 'Other banks', shortName: 'Other', type: 'Bank network', focus: 'Compare eligible options', maxAmount: 2000000, note: 'Compare participating lenders based on your profile.' }
 ];
 
 export const loanApplications = [];
-export const onlinePrices = [
-  { crop: 'Onion', store: 'KisanSetu Online Store', price: 2850, unit: 'quintal', date: '2026-09-02' },
-  { crop: 'Onion', store: 'FreshCart Wholesale', price: 2920, unit: 'quintal', date: '2026-09-02' },
-  { crop: 'Onion', store: 'AgroDirect', price: 2780, unit: 'quintal', date: '2026-09-02' },
-  { crop: 'Tomato', store: 'KisanSetu Online Store', price: 2250, unit: 'quintal', date: '2026-09-02' },
-  { crop: 'Tomato', store: 'FreshCart Wholesale', price: 2380, unit: 'quintal', date: '2026-09-02' },
-  { crop: 'Tomato', store: 'AgroDirect', price: 2320, unit: 'quintal', date: '2026-09-02' },
-  { crop: 'Soybean', store: 'KisanSetu Online Store', price: 4680, unit: 'quintal', date: '2026-09-02' },
-  { crop: 'Soybean', store: 'FreshCart Wholesale', price: 4740, unit: 'quintal', date: '2026-09-02' },
-  { crop: 'Soybean', store: 'AgroDirect', price: 4550, unit: 'quintal', date: '2026-09-02' }
+
+export const onlineStorePrices = [
+  { crop: 'Onion', platform: 'AgriMart Online', price: 3150 },
+  { crop: 'Tomato', platform: 'AgriMart Online', price: 2450 },
+  { crop: 'Soybean', platform: 'AgriMart Online', price: 4980 }
 ];
+
+const initialState = structuredClone({ cropLots, offers, transactions, grievances, loanApplications });
+
+export function resetDemoData() {
+  for (const [target, source] of [[cropLots, initialState.cropLots], [offers, initialState.offers], [transactions, initialState.transactions], [grievances, initialState.grievances], [loanApplications, initialState.loanApplications]]) {
+    target.splice(0, target.length, ...structuredClone(source));
+  }
+}
