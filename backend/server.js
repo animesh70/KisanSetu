@@ -9,6 +9,7 @@ import marketRoutes from './routes/marketRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
 import offerRoutes from './routes/offerRoutes.js';
 import supportRoutes from './routes/supportRoutes.js';
+import loanRoutes from './routes/loanRoutes.js';
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
@@ -17,6 +18,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'KisanSet
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/markets', marketRoutes);
+app.use('/api/loans', loanRoutes);
 app.use('/api/lots', lotRoutes);
 app.use('/api/buyers', buyerRoutes);
 app.use('/api/matches', matchRoutes);
