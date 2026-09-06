@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Bell, Boxes, CircleDollarSign, Leaf, MapPin, Menu, PackagePlus, ShieldCheck, Sparkles, TrendingUp, Truck, Users, CheckCircle2, Clock3, MessageSquareWarning, Trash2 } from 'lucide-react';
+import { ArrowRight, Bell, Boxes, CircleDollarSign, Landmark, Leaf, MapPin, Menu, PackagePlus, ShieldCheck, Sparkles, TrendingUp, Truck, Users, CheckCircle2, Clock3, MessageSquareWarning, Trash2 } from 'lucide-react';
 import { api } from './services/api';
 import StatCard from './components/StatCard';
 import TrendChart from './components/TrendChart';
 import LotModal from './components/LotModal';
+import LoanModal from './components/LoanModal';
+import LoanReceipt from './components/LoanReceipt';
 
 const fallback = {
   prices: [
@@ -47,7 +49,59 @@ export default function App() {
   const [expandedBuyer, setExpandedBuyer] = useState('');
   const [showBuyerGuide, setShowBuyerGuide] = useState(false);
   const [farmerMode, setFarmerMode] = useState(false);
+  const fallbackBanks = [
+    {
+      id: 'sbi',
+      name: 'State Bank of India',
+      type: 'Public sector bank',
+      schemes: [
+        { id: 'sbi-kcc', name: 'Kisan Credit Card', category: 'crop', interestRate: 7.0, maxAmount: 300000, tenureMonths: 12 },
+        { id: 'sbi-agri-term', name: 'SBI Agri Business Term Loan', category: 'business', interestRate: 9.5, maxAmount: 2000000, tenureMonths: 60 }
+      ]
+    },
+    {
+      id: 'axis',
+      name: 'Axis Bank',
+      type: 'Private bank',
+      schemes: [
+        { id: 'axis-kisan', name: 'Axis Kisan PowerLoan', category: 'crop', interestRate: 8.5, maxAmount: 500000, tenureMonths: 24 },
+        { id: 'axis-agri-biz', name: 'Axis Agri Business Loan', category: 'business', interestRate: 11, maxAmount: 5000000, tenureMonths: 84 }
+      ]
+    },
+    {
+      id: 'other',
+      name: 'Other Banks (RRB / Cooperative)',
+      type: 'Regional rural & cooperative banks',
+      schemes: [
+        { id: 'other-crop', name: 'NABARD Refinanced Crop Loan', category: 'crop', interestRate: 7.0, maxAmount: 160000, tenureMonths: 12 },
+        { id: 'other-microbiz', name: 'Rural Micro-Business Loan', category: 'business', interestRate: 10.5, maxAmount: 1000000, tenureMonths: 48 }
+      ]
+    }
+  ];
+  const [banks, setBanks] = useState(fallbackBanks);
+  const [showLoanForm, setShowLoanForm] = useState(false);
+  const [loanCategory, setLoanCategory] = useState('crop');
+  const [loanReceipt, setLoanReceipt] = useState(null);
 
+  useEffect(() => {
+    api.getBanks().then(setBanks).catch(() => setBanks(fallbackBanks));
+  }, []);
+
+  const submitLoanApplication = async (application) => {
+    try {
+      const receipt = await api.applyForLoan(application);
+      setLoanReceipt(receipt);
+      setShowLoanForm(false);
+      notify(
+        receipt.selectedBank
+          ? `Loan application ${receipt.id} matched with ${receipt.selectedBank.name}.`
+          : `Loan application ${receipt.id} submitted for manual review.`,
+        'Loan application submitted'
+      );
+    } catch (error) {
+      setNotice(error.message || 'Could not submit the loan application.');
+    }
+  };
   const loadDashboard = async () => {
     setLoading(true); setNotice('');
     try {
@@ -111,14 +165,14 @@ export default function App() {
 
   const navigateTo = (item) => {
     setActiveNav(item);
-    const targetId = { Dashboard: 'dashboard', 'Market prices': 'market-prices', 'My crop lots': 'crop-lots', 'Buyer matches': 'buyer-matches', Logistics: 'logistics', Transactions: 'transactions' }[item];
+    const targetId = { Dashboard: 'dashboard', 'Market prices': 'market-prices', 'My crop lots': 'crop-lots', 'Buyer matches': 'buyer-matches', Logistics: 'logistics', Transactions: 'transactions', 'Smart Loan': 'smart-loan' }[item];
     document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const bestMarket = [...data.prices].sort((a, b) => b.modalPrice - a.modalPrice)[0];
   const visiblePrices = showAllPrices && allPrices.length ? allPrices : data.prices;
   const pendingOfferCount = offers.filter((offer) => offer.status === 'pending').length;
-  const navItems = [{ label: 'Dashboard', icon: Boxes }, { label: 'Market prices', icon: TrendingUp }, { label: 'My crop lots', icon: PackagePlus }, { label: 'Buyer matches', icon: Users }, { label: 'Logistics', icon: Truck }, { label: 'Transactions', icon: CircleDollarSign }];
+  const navItems = [{ label: 'Dashboard', icon: Boxes }, { label: 'Market prices', icon: TrendingUp }, { label: 'My crop lots', icon: PackagePlus }, { label: 'Buyer matches', icon: Users }, { label: 'Logistics', icon: Truck }, { label: 'Transactions', icon: CircleDollarSign }, { label: 'Smart Loan', icon: Landmark }];
   return <div className="app-shell">
     <aside className="sidebar"><div className="brand"><span className="brand-mark"><Leaf size={23}/></span><div><strong>KisanSetu</strong><small>Market intelligence</small></div></div><nav>{navItems.map(({ label, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} onClick={() => navigateTo(label)}><Icon size={19}/>{label}</button>)}</nav><div className="sidebar-footer"><div className="profile-avatar">SP</div><div><strong>Sanjay Patil</strong><small>Farmer · Nashik</small></div></div></aside>
     {mobileNavOpen && <div className="mobile-nav-layer"><button className="mobile-nav-backdrop" aria-label="Close menu" onClick={() => setMobileNavOpen(false)}/><aside className="mobile-nav" aria-label="Mobile navigation"><div className="mobile-nav-head"><div className="brand"><span className="brand-mark"><Leaf size={21}/></span><div><strong>KisanSetu</strong><small>Market intelligence</small></div></div><button type="button" className="icon-button" aria-label="Close menu" onClick={() => setMobileNavOpen(false)}>×</button></div><nav>{navItems.map(({ label, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} onClick={() => { navigateTo(label); setMobileNavOpen(false); }}><Icon size={19}/>{label}</button>)}</nav><div className="sidebar-footer"><div className="profile-avatar">SP</div><div><strong>Sanjay Patil</strong><small>Farmer · Nashik</small></div></div></aside></div>}
@@ -146,7 +200,98 @@ export default function App() {
       {transactions.map((transaction) => <section className="transaction-card" key={transaction.id}><div className="transaction-status"><CheckCircle2 size={13}/> {transaction.paymentStatus.replaceAll('_', ' ')}</div><div><strong>{transaction.crop || 'Crop lot'} · {formatPrice(transaction.amount)}</strong><p>{transaction.buyerName || 'Verified buyer'} · {transaction.quantity || '—'} q · {transaction.status.replaceAll('_', ' ')}</p><small className="payment-detail">{transaction.pickupWindow || selectedService || 'Select logistics above'} · {transaction.driverName || 'Driver assigned after pickup'} · {transaction.driverPhone || 'Contact pending'}</small><small className="payment-detail">{transaction.paymentMethod || 'Demo payment'} · Ref: {transaction.paymentReference || 'Generated after acceptance'} · {transaction.paymentDue || 'Payment timing shown after acceptance'}</small><div className="transaction-steps"><span className={['pickup_scheduled', 'in_transit', 'delivered', 'completed'].includes(transaction.status) ? 'done' : ''}>1. Pickup</span><span className={['in_transit', 'delivered', 'completed'].includes(transaction.status) ? 'done' : ''}>2. Transit</span><span className={['delivered', 'completed'].includes(transaction.status) ? 'done' : ''}>3. Delivery</span><span className={transaction.paymentStatus === 'paid' ? 'done' : ''}>4. Payment</span></div></div><div className="offer-actions">{transaction.status !== 'completed' && <button className="primary-button" onClick={() => moveTransaction(transaction)}><Clock3 size={16}/> Next step</button>}{['delivered', 'completed'].includes(transaction.status) && transaction.paymentStatus !== 'paid' && <button className="outline-button" onClick={() => confirmPayment(transaction)}>Confirm payment received</button>}<button className="quiet-button" onClick={() => downloadReceipt(transaction)}>Download receipt</button></div></section>)}
       {!offers.some((offer) => offer.status === 'pending') && !transactions.length && <section className="empty-state"><CheckCircle2 size={21}/><div><strong>No active offers yet</strong><p>Create a crop lot to start receiving buyer offers.</p></div></section>}
       <section className="support-card"><MessageSquareWarning size={22}/><div><p className="eyebrow">NEED HELP?</p><h3>Raise a grievance</h3><p>Report an offer, logistics, quality, or payment issue.</p></div><form onSubmit={submitGrievance}><input value={grievanceText} onChange={(event) => setGrievanceText(event.target.value)} aria-label="Describe your concern" placeholder="Describe your concern"/><button className="outline-button">Submit</button></form></section>
+      <section id="smart-loan" className="section-header">
+        <div>
+          <p className="eyebrow">FINANCE YOUR HARVEST</p>
+          <h2>Smart Loan</h2>
+        </div>
+        <button className="text-button" onClick={() => setShowLoanForm(true)}>
+          Apply for a loan <ArrowRight size={16}/>
+        </button>
+      </section>
+
+      <section className="bank-grid">
+        {banks.map((bank) => {
+          const cropScheme = bank.schemes.find((scheme) => scheme.category === 'crop') || bank.schemes[0];
+          const businessScheme = bank.schemes.find((scheme) => scheme.category === 'business');
+
+          return (
+            <article className="bank-card" key={bank.id}>
+              <div className="bank-top">
+                <div className="buyer-logo"><Landmark size={17}/></div>
+                <span className="verified"><ShieldCheck size={15}/> {bank.type}</span>
+              </div>
+
+              <h3>{bank.name}</h3>
+
+              <ul className="bank-schemes">
+                {cropScheme && (
+                  <li>
+                    <span>{cropScheme.name}</span>
+                    <strong>{cropScheme.interestRate}% p.a. � up to {formatPrice(cropScheme.maxAmount)}</strong>
+                  </li>
+                )}
+
+                {businessScheme && (
+                  <li>
+                    <span>{businessScheme.name}</span>
+                    <strong>{businessScheme.interestRate}% p.a. � up to {formatPrice(businessScheme.maxAmount)}</strong>
+                  </li>
+                )}
+              </ul>
+
+              <button
+                className="outline-button"
+                onClick={() => {
+                  setLoanCategory(cropScheme?.category || 'crop');
+                  setShowLoanForm(true);
+                }}
+              >
+                Check eligibility
+              </button>
+            </article>
+          );
+        })}
+      </section>
+
+      <article className="recommendation loan-recommendation">
+        <div className="recommendation-icon"><Sparkles size={20}/></div>
+        <p className="eyebrow">BUSINESS/CROP-BASED RECOMMENDATION</p>
+        <h3>Not sure which loan fits?</h3>
+        <p>
+          Tell us your crop or business, loan amount and income � we match you
+          with the bank and scheme you are most likely to be eligible for.
+        </p>
+        <button className="secondary-button" onClick={() => setShowLoanForm(true)}>
+          Start loan application <ArrowRight size={17}/>
+        </button>
+      </article>
     </main>
-    {showLotForm && <LotModal crop={filters.crop} onClose={() => setShowLotForm(false)} onSave={createLot}/>} 
+    {showLotForm && <LotModal crop={filters.crop} onClose={() => setShowLotForm(false)} onSave={createLot}/>}
+    {showLoanForm && (
+      <LoanModal
+        defaultCrop={loanCategory === 'crop' ? filters.crop : ''}
+        onClose={() => setShowLoanForm(false)}
+        onSave={submitLoanApplication}
+      />
+    )}
+    {loanReceipt && (
+      <LoanReceipt
+        application={loanReceipt}
+        onClose={() => setLoanReceipt(null)}
+        onNewApplication={() => {
+          setLoanReceipt(null);
+          setShowLoanForm(true);
+        }}
+      />
+    )}
   </div>;
 }
+
+
+
+
+
+
+
+
