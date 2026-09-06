@@ -26,5 +26,11 @@ export const api = {
   respondToOffer: (id, status, counterPrice, message) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status, counterPrice, message }) }),
   updateTransaction: (id, status, paymentStatus) => request(`/transactions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(paymentStatus ? { paymentStatus } : {}) }) }),
   raiseGrievance: (description) => request('/grievances', { method: 'POST', body: JSON.stringify({ category: 'Transaction support', description, raisedBy: 'farmer-1' }) }),
-  resetDemo: () => request('/demo/reset', { method: 'POST' })
+  resetDemo: () => request('/demo/reset', { method: 'POST' }),
+  getBanks: () => request('/loans/banks'),
+  applyForLoan: (application) => request('/loans/apply', { method: 'POST', body: JSON.stringify(application) }),
+  getLoanApplication: (id) => request(`/loans/${id}`)
 };
+
+
+

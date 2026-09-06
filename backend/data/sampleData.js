@@ -38,12 +38,45 @@ export const logisticsOptions = [
   { id: 'storage-1', provider: 'Nashik Cold Store', type: 'Storage', serviceArea: ['Nashik'], capacity: 300, ratePerDay: 18, contact: '9822002200', available: true }
 ];
 
+export const banks = [
+  {
+    id: 'sbi',
+    name: 'State Bank of India',
+    type: 'Public sector bank',
+    schemes: [
+      { id: 'sbi-kcc', name: 'Kisan Credit Card', category: 'crop', interestRate: 7.0, maxAmount: 300000, minIncome: 0, tenureMonths: 12, processingFee: '0.35%' },
+      { id: 'sbi-agri-term', name: 'SBI Agri Business Term Loan', category: 'business', interestRate: 9.5, maxAmount: 2000000, minIncome: 150000, tenureMonths: 60, processingFee: '1%' }
+    ]
+  },
+  {
+    id: 'axis',
+    name: 'Axis Bank',
+    type: 'Private bank',
+    schemes: [
+      { id: 'axis-kisan', name: 'Axis Kisan Power Loan', category: 'crop', interestRate: 8.5, maxAmount: 500000, minIncome: 0, tenureMonths: 24, processingFee: '0.5%' },
+      { id: 'axis-agri-biz', name: 'Axis Agri Business Loan', category: 'business', interestRate: 11, maxAmount: 5000000, minIncome: 300000, tenureMonths: 84, processingFee: '1.25%' }
+    ]
+  },
+  {
+    id: 'other',
+    name: 'Other Banks (RRB / Cooperative, NABARD-linked)',
+    type: 'Regional rural & cooperative banks',
+    schemes: [
+      { id: 'other-crop', name: 'NABARD Refinanced CropLoan', category: 'crop', interestRate: 7.0, maxAmount: 160000, minIncome: 0, tenureMonths: 12, processingFee: '0.25%' },
+      { id: 'other-microbiz', name: 'Rural Micro-Business Loan', category: 'business', interestRate: 10.5, maxAmount: 1000000, minIncome: 100000, tenureMonths: 48, processingFee: '0.75%' }
+    ]
+  }
+];
+
+export const loanApplications = [];
+
 export const grievances = [];
 
-const initialState = structuredClone({ cropLots, offers, transactions, grievances });
+const initialState = structuredClone({ cropLots, offers, transactions, grievances, loanApplications });
 
 export function resetDemoData() {
-  for (const [target, source] of [[cropLots, initialState.cropLots], [offers, initialState.offers], [transactions, initialState.transactions], [grievances, initialState.grievances]]) {
+  for (const [target, source] of [[cropLots, initialState.cropLots], [offers, initialState.offers], [transactions, initialState.transactions], [grievances, initialState.grievances], [loanApplications, initialState.loanApplications]]) {
     target.splice(0, target.length, ...structuredClone(source));
   }
 }
+
