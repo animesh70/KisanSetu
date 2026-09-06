@@ -14,7 +14,7 @@ export const api = {
   getTrend: (crop) => request(`/markets/trends?crop=${encodeURIComponent(crop)}`),
   getForecast: (crop) => request(`/markets/forecast?crop=${encodeURIComponent(crop)}`),
   getRecommendation: ({ crop, quantity, grade }) => request(`/recommendations/sell?crop=${encodeURIComponent(crop)}&quantity=${quantity}&grade=${grade}`),
-  getBuyers: () => request('/buyers'),
+  getBuyers: (crop) => request(`/buyers${crop ? `?crop=${encodeURIComponent(crop)}` : ''}`),
   getLots: () => request('/lots'),
   getOffers: () => request('/offers'),
   getTransactions: () => request('/transactions'),
@@ -22,9 +22,10 @@ export const api = {
   createLot: (lot) => request('/lots', { method: 'POST', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify(lot) }),
   updateLot: (id, changes) => request(`/lots/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify(changes) }),
   deleteLot: (id) => request(`/lots/${id}`, { method: 'DELETE', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' } }),
-  acceptOffer: (id) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status: 'accepted' }) }),
+  acceptOffer: (id, logisticsOptionId) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status: 'accepted', logisticsOptionId }) }),
   respondToOffer: (id, status, counterPrice, message) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status, counterPrice, message }) }),
   updateTransaction: (id, status, paymentStatus) => request(`/transactions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(paymentStatus ? { paymentStatus } : {}) }) }),
+  selectTransactionLogistics: (id, logisticsOptionId) => request(`/transactions/${id}/logistics`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ logisticsOptionId }) }),
   raiseGrievance: (description) => request('/grievances', { method: 'POST', body: JSON.stringify({ category: 'Transaction support', description, raisedBy: 'farmer-1' }) }),
   resetDemo: () => request('/demo/reset', { method: 'POST' })
 };

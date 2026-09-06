@@ -8,5 +8,8 @@ router.get('/lots/:lotId', (req, res) => {
   if (!lot) return res.status(404).json({ message: 'Crop lot not found.' });
   res.json(getMatches(lot));
 });
-router.get('/sell', async (req, res) => res.json(await getSellingRecommendation(req.query)));
+router.get('/sell', async (req, res) => {
+  try { res.json(await getSellingRecommendation(req.query)); }
+  catch (error) { res.status(400).json({ message: error.message }); }
+});
 export default router;

@@ -42,6 +42,7 @@ main { margin-left: 252px; width: calc(100% - 252px); max-width: 1600px; padding
 /* Selected logistics is confirmed in the page, while negotiation stays compact. */
 .logistics-confirmation { display: flex; align-items: center; gap: 8px; margin: 10px 0 22px; padding: 10px 13px; border: 1px solid #cde6d3; border-radius: 9px; background: #f2faf4; color: #35644a; font-size: 11px; }
 .logistics-confirmation svg, .logistics-confirmation strong { color: #1d7144; }
+.form-error { margin: 12px 0 0; color: #ad3e30; font-size: 11px; font-weight: 650; }
 .counter-row { align-items: center; }
 .counter-row input { flex: 0 0 122px; width: 122px; padding: 8px 9px; font-size: 12px; }
 @media (max-width: 700px) { .notice-toast { top: 12px; right: 12px; width: calc(100vw - 24px); } }

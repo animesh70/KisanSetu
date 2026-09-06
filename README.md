@@ -22,6 +22,8 @@ Farmer/FPO → Market prices and forecast → Crop lot → Buyer matches → Off
 ## Demo features
 
 - Mandi rate comparison with estimated transport cost and net realisation per quintal
+- Guardrails for quantities: whole numbers from 1 to 5,000 quintals, enforced by both the UI and API
+- Crop-aware buyer matching: only buyers that list demand for the chosen crop appear, with a complete demo path for Onion, Tomato, and Soybean
 - Seven-day price trend and a clear **Sell now / Hold briefly** recommendation
 - Optional crop variety, grade, quantity, harvest date, and pickup-location details for crop lots
 - **My crop lots** view so published lots remain visible after submission
@@ -29,6 +31,7 @@ Farmer/FPO → Market prices and forecast → Crop lot → Buyer matches → Off
 - Buyer ranking based on offer price, distance, quantity fit, grade, and reliability
 - Offer negotiation: accept, decline, or send a counter-offer
 - Logistics and storage selection
+- Logistics selection is included in the simulated transaction estimate; pickup scheduling requires a selected option
 - Transaction steps: pickup → transit → delivery → payment confirmation
 - Payment amount, demo payment method, status, and reference ID
 - Mobile navigation drawer, responsive forms, notification centre, and floating action feedback
@@ -49,11 +52,16 @@ This prototype intentionally labels its demo data in the interface:
 | Markets | `GET /api/markets/prices`, `/trends`, `/forecast` | Demo prices, price trend, and forecast. |
 | Crop lots | `GET/POST /api/lots` | View or publish a farmer crop lot. |
 | Recommendations | `GET /api/recommendations/sell` | Sell/hold recommendation and net-price options. |
+| Buyers | `GET /api/buyers?crop=Tomato` | Demo buyers, optionally filtered to the selected crop. |
 | Offers | `GET/PATCH /api/offers/:id` | View, accept, decline, or counter a buyer offer. |
 | Transactions | `GET /api/transactions`, `PATCH /api/transactions/:id/status` | Track logistics steps and payment status. |
 | Demo reset | `POST /api/demo/reset` | Restore the initial demo data for a new presentation. |
 
 For demo-protected farmer actions, the frontend sends `x-demo-role: farmer` and `x-demo-user-id: farmer-1`. These are only mock role checks and are not production authentication.
+
+### Price and transport assumptions
+
+For the current demo, transport is estimated at **₹0.45 per kilometre per quintal** (minimum ₹8/quintal). It is a visible planning estimate, not a carrier quote. This avoids the former unrealistic behaviour where transport cost approached zero for large quantities. Inputs are restricted to whole lots from **1 to 5,000 quintals**. Market prices, buyer profiles, logistics capacity, and payment tracking remain simulated.
 
 ## Run the backend
 
