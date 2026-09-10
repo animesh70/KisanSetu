@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { grievances, logisticsOptions, resetDemoData, transactions } from '../data/sampleData.js';
+import { buyers, grievances, logisticsOptions, resetDemoData, transactions } from '../data/sampleData.js';
 import { requireRole } from '../middleware/auth.js';
+import { calculateLogisticsQuote, calculateNetPayable, DEFAULT_TRANSACTION_STORAGE_DAYS } from '../services/logisticsService.js';
 
 const router = Router();
 router.get('/logistics', (req, res) => res.json(logisticsOptions));
@@ -11,11 +12,34 @@ router.patch('/transactions/:id/logistics', requireRole('farmer', 'fpo', 'buyer'
   const transaction = transactions.find((item) => item.id === req.params.id);
   const logistics = logisticsOptions.find((item) => item.id === req.body.logisticsOptionId);
   if (!transaction) return res.status(404).json({ message: 'Transaction not found.' });
-  if (!logistics) return res.status(400).json({ message: 'Select an available logistics option.' });
-  const trips = logistics.type === 'Transport' ? Math.ceil(transaction.quantity / logistics.capacity) : 0;
-  transaction.logisticsOptionId = logistics.id; transaction.logisticsProvider = logistics.provider;
-  transaction.logisticsFee = logistics.type === 'Transport' ? logistics.ratePerKm * 185 * trips : logistics.ratePerDay * transaction.quantity * 5;
-  transaction.netPayable = transaction.grossAmount - transaction.logisticsFee - transaction.platformFee;
+  if (!logistics || logistics.available === false) return res.status(400).json({ message: 'Select an available logistics option.' });
+  const buyer = buyers.find((item) => item.id === transaction.buyerId);
+  const buyerDistanceKm = Number.isFinite(Number(transaction.buyerDistanceKm))
+    ? Number(transaction.buyerDistanceKm)
+    : Number(buyer?.distanceKm || 0);
+  const requestedStorageDays = Number(req.body.storageDays);
+  const storageDays = Number.isInteger(requestedStorageDays) && requestedStorageDays > 0
+    ? requestedStorageDays
+    : (transaction.storageDays || DEFAULT_TRANSACTION_STORAGE_DAYS);
+  const logisticsQuote = calculateLogisticsQuote({
+    logisticsOption: logistics,
+    quantity: transaction.quantity,
+    distanceKm: buyerDistanceKm,
+    holdingDays: storageDays
+  });
+  transaction.buyerDistanceKm = buyerDistanceKm;
+  transaction.logisticsOptionId = logistics.id;
+  transaction.logisticsProvider = logistics.provider;
+  transaction.logisticsType = logisticsQuote.type;
+  transaction.logisticsFee = logisticsQuote.totalCost;
+  transaction.logisticsCostPerQuintal = logisticsQuote.costPerQuintal;
+  transaction.transportTrips = logisticsQuote.type === 'Transport' ? logisticsQuote.trips : 0;
+  transaction.storageDays = logisticsQuote.type === 'Storage' ? logisticsQuote.holdingDays : null;
+  transaction.netPayable = calculateNetPayable({
+    grossAmount: transaction.grossAmount,
+    logisticsFee: transaction.logisticsFee,
+    platformFee: transaction.platformFee
+  });
   transaction.auditLog.push({ event: `Logistics selected: ${logistics.provider}`, at: new Date().toISOString() });
   res.json(transaction);
 });
@@ -24,7 +48,7 @@ router.patch('/transactions/:id/status', requireRole('farmer', 'fpo', 'buyer', '
   if (!transaction) return res.status(404).json({ message: 'Transaction not found.' });
   const requestedStatus = req.body.status || transaction.status;
   if (requestedStatus !== transaction.status && nextStatus[transaction.status] !== requestedStatus) return res.status(400).json({ message: `Invalid transaction transition from ${transaction.status} to ${requestedStatus}.` });
-  if (requestedStatus === 'pickup_scheduled' && !transaction.logisticsOptionId) return res.status(400).json({ message: 'Select transport or storage before scheduling pickup.' });
+  if (requestedStatus === 'pickup_scheduled' && !transaction.logisticsOptionId) return res.status(400).json({ message: 'Please choose a logistics option before scheduling pickup.' });
   transaction.status = requestedStatus;
   transaction.paymentStatus = req.body.paymentStatus || transaction.paymentStatus;
   transaction.auditLog.push({ event: `Status changed to ${transaction.status}`, at: new Date().toISOString() });

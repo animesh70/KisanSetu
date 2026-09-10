@@ -4,13 +4,14 @@ async function request(path, options = {}) {
   const response = await fetch(`${API_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers } });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.message || 'This demo action could not be completed. Please try again.');
+    const message = typeof payload.message === 'string' ? payload.message : typeof payload.error === 'string' ? payload.error : typeof payload.error?.message === 'string' ? payload.error.message : null;
+    throw new Error(message || 'This demo action could not be completed. Please try again.');
   }
   return response.json();
 }
 
 export const api = {
-  getPrices: (crop, district) => request(`/markets/prices?crop=${encodeURIComponent(crop)}${district ? `&district=${encodeURIComponent(district)}` : ''}`),
+  getPrices: (crop, district, quantity) => request(`/markets/prices?crop=${encodeURIComponent(crop)}${district ? `&district=${encodeURIComponent(district)}` : ''}${quantity !== undefined && quantity !== '' ? `&quantity=${encodeURIComponent(quantity)}` : ''}`),
   getTrend: (crop) => request(`/markets/trends?crop=${encodeURIComponent(crop)}`),
   getForecast: (crop) => request(`/markets/forecast?crop=${encodeURIComponent(crop)}`),
   getRecommendation: ({ crop, quantity, grade }) => request(`/recommendations/sell?crop=${encodeURIComponent(crop)}&quantity=${quantity}&grade=${grade}`),
