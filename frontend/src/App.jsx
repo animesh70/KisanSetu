@@ -4,6 +4,7 @@ import { api } from './services/api';
 import StatCard from './components/StatCard';
 import TrendChart from './components/TrendChart';
 import LotModal from './components/LotModal';
+import KisanAssistant from './components/KisanAssistant';
 
 const fallback = {
   prices: [
@@ -152,5 +153,27 @@ export default function App() {
       <section className="support-card"><MessageSquareWarning size={22}/><div><p className="eyebrow">NEED HELP?</p><h3>Raise a grievance</h3><p>Report an offer, logistics, quality, or payment issue.</p></div><form onSubmit={submitGrievance}><input value={grievanceText} onChange={(event) => setGrievanceText(event.target.value)} aria-label="Describe your concern" placeholder="Describe your concern"/><button className="outline-button">Submit</button></form></section>
     </main>
     {showLotForm && <LotModal crop={filters.crop} onClose={() => setShowLotForm(false)} onSave={createLot}/>} 
+    <KisanAssistant
+      context={{ filters, data, lots, offers, transactions, logistics, selectedService }}
+      onAction={(key) => {
+        if (key === 'create-lot') {
+          setShowLotForm(true);
+          return;
+        }
+        if (key === 'market') {
+          navigateTo('Market prices');
+          return;
+        }
+        if (key === 'offers' || key === 'transactions') {
+          navigateTo('Transactions');
+          return;
+        }
+        if (key === 'logistics') {
+          navigateTo('Logistics');
+          return;
+        }
+        document.querySelector('.recommendation')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }}
+    />
   </div>;
 }

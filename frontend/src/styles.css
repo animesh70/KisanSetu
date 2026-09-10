@@ -47,3 +47,34 @@ main { margin-left: 252px; width: calc(100% - 252px); max-width: 1600px; padding
 .counter-row input { flex: 0 0 122px; width: 122px; padding: 8px 9px; font-size: 12px; }
 @media (max-width: 700px) { .notice-toast { top: 12px; right: 12px; width: calc(100vw - 24px); } }
 @media (max-width: 700px) { .notification-panel { position: fixed; top: 62px; right: 12px; width: min(330px, calc(100vw - 24px)); } }
+
+/* Context-aware farmer assistant. It stays out of the primary task flow until opened. */
+.kisan-assistant { position: fixed; right: 22px; bottom: 22px; z-index: 28; }
+.assistant-fab { min-height: 48px; border: 0; border-radius: 14px; padding: 0 15px; display: inline-flex; align-items: center; gap: 8px; color: #fff; background: linear-gradient(135deg, #176b40, #259157); box-shadow: 0 12px 28px rgba(20, 93, 53, .27); font-size: 12px; font-weight: 750; transition: transform .18s ease, box-shadow .18s ease; }
+.assistant-fab:hover { transform: translateY(-2px); box-shadow: 0 16px 30px rgba(20, 93, 53, .34); }
+.assistant-panel { position: absolute; right: 0; bottom: 60px; width: min(370px, calc(100vw - 32px)); max-height: min(570px, calc(100dvh - 105px)); overflow: hidden; display: flex; flex-direction: column; border: 1px solid #d7e9dc; border-radius: 16px; background: #fff; box-shadow: 0 20px 50px rgba(17, 66, 39, .24); animation: assistant-in .18s ease-out; }
+.assistant-panel > header { display: flex; align-items: center; gap: 9px; padding: 14px; color: #fff; background: linear-gradient(120deg, #145f39, #21834d); }
+.assistant-avatar { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: #1e7546; background: #ecf8ef; }
+.assistant-panel header div { flex: 1; min-width: 0; }
+.assistant-panel header strong, .assistant-panel header small { display: block; }
+.assistant-panel header strong { font-size: 13px; }
+.assistant-panel header small { margin-top: 2px; color: #d2ebd9; font-size: 9px; }
+.assistant-panel header button { width: 29px; height: 29px; border: 0; border-radius: 8px; display: grid; place-items: center; color: #e7f5ea; background: rgba(255,255,255,.14); }
+.assistant-panel header button:hover { background: rgba(255,255,255,.23); }
+.assistant-messages { min-height: 116px; max-height: 250px; overflow-y: auto; padding: 13px; background: #f7faf7; }
+.assistant-messages > article { max-width: 94%; margin: 0; padding: 11px; border: 1px solid #dcebdd; border-radius: 4px 12px 12px; background: #fff; }
+.assistant-messages > article + article, .assistant-messages .assistant-question + article { margin-top: 9px; }
+.assistant-messages article strong { color: #206a40; font-size: 12px; }
+.assistant-messages article p { margin: 5px 0 9px; color: #587166; font-size: 11px; line-height: 1.48; }
+.assistant-messages article button { border: 0; border-radius: 7px; padding: 7px 9px; color: #1c7043; background: #e8f5eb; font-size: 10px; font-weight: 750; }
+.assistant-question { width: fit-content; max-width: 88%; margin: 9px 0 9px auto; padding: 8px 10px; border-radius: 12px 4px 12px 12px; color: #fff; background: #287c4c; font-size: 11px; line-height: 1.4; }
+.assistant-suggestions { display: flex; gap: 6px; overflow-x: auto; padding: 10px 12px 8px; border-top: 1px solid #edf2ee; background: #fff; }
+.assistant-suggestions button { flex: 0 0 auto; border: 1px solid #d7e8db; border-radius: 999px; padding: 6px 8px; color: #2b7048; background: #f8fcf9; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.assistant-suggestions button:hover { color: #176b40; border-color: #a8d3b4; background: #eef8f0; }
+.assistant-panel form { display: flex; gap: 7px; padding: 8px 12px 7px; background: #fff; }
+.assistant-panel input { min-width: 0; flex: 1; border: 1px solid #d6e4d9; border-radius: 9px; padding: 9px 10px; color: #315c44; outline-color: #47a46e; font-size: 11px; }
+.assistant-panel form button { width: 34px; border: 0; border-radius: 9px; display: grid; place-items: center; color: #fff; background: #217b49; }
+.assistant-panel form button:hover { background: #176b40; }
+.assistant-disclaimer { margin: 0; padding: 0 12px 11px; color: #809287; font-size: 8px; line-height: 1.35; background: #fff; }
+@keyframes assistant-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 700px) { .kisan-assistant { right: 12px; bottom: 14px; }.assistant-panel { width: min(370px, calc(100vw - 24px)); bottom: 58px; max-height: min(560px, calc(100dvh - 88px)); }.assistant-fab { min-height: 44px; border-radius: 12px; padding: 0 13px; }.assistant-messages { max-height: 220px; } }
