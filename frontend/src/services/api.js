@@ -1,7 +1,10 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers } });
+  const isFormData = options.body instanceof FormData;
+  const hasRawBody = options.body instanceof Blob || options.body instanceof ArrayBuffer;
+  const headers = { ...(!isFormData && !hasRawBody ? { 'Content-Type': 'application/json' } : {}), ...options.headers };
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     const message = typeof payload.message === 'string' ? payload.message : typeof payload.error === 'string' ? payload.error : typeof payload.error?.message === 'string' ? payload.error.message : null;
@@ -14,6 +17,12 @@ export const api = {
   getPrices: (crop, district, quantity) => request(`/markets/prices?crop=${encodeURIComponent(crop)}${district ? `&district=${encodeURIComponent(district)}` : ''}${quantity !== undefined && quantity !== '' ? `&quantity=${encodeURIComponent(quantity)}` : ''}`),
   getTrend: (crop) => request(`/markets/trends?crop=${encodeURIComponent(crop)}`),
   getForecast: (crop) => request(`/markets/forecast?crop=${encodeURIComponent(crop)}`),
+  getAdvisorPrice: (crop, days = 7) => request(`/advisor/price?crop=${encodeURIComponent(crop)}&days=${encodeURIComponent(days)}`),
+  analyzeCropImage: (file, crop) => request(`/advisor/disease?crop=${encodeURIComponent(crop || 'crop')}`, {
+    method: 'POST',
+    headers: { 'Content-Type': file.type || 'application/octet-stream', 'x-file-name': encodeURIComponent(file.name || 'crop-image') },
+    body: file
+  }),
   getRecommendation: ({ crop, quantity, grade }) => request(`/recommendations/sell?crop=${encodeURIComponent(crop)}&quantity=${quantity}&grade=${grade}`),
   getBuyers: (crop) => request(`/buyers${crop ? `?crop=${encodeURIComponent(crop)}` : ''}`),
   getLots: () => request('/lots'),

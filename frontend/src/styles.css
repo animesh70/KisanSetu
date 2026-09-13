@@ -78,3 +78,80 @@ main { margin-left: 252px; width: calc(100% - 252px); max-width: 1600px; padding
 .assistant-disclaimer { margin: 0; padding: 0 12px 11px; color: #809287; font-size: 8px; line-height: 1.35; background: #fff; }
 @keyframes assistant-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @media (max-width: 700px) { .kisan-assistant { right: 12px; bottom: 14px; }.assistant-panel { width: min(370px, calc(100vw - 24px)); bottom: 58px; max-height: min(560px, calc(100dvh - 88px)); }.assistant-fab { min-height: 44px; border-radius: 12px; padding: 0 13px; }.assistant-messages { max-height: 220px; } }
+
+/* Localized, voice-ready advisor and offline status. */
+.language-select { max-width: 118px; height: 36px; border: 1px solid #d5e6d9; border-radius: 9px; padding: 0 28px 0 9px; color: #245f40; background: #fff; font-size: 10px; font-weight: 700; }
+.assistant-tools { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; padding: 9px 12px; border-bottom: 1px solid #e9f0ea; background: #fff; }
+.assistant-tools .assistant-language, .assistant-tools button { min-width: 0; height: 32px; border: 1px solid #d5e6d9; border-radius: 8px; color: #216b42; background: #f8fcf9; font-size: 9px; font-weight: 700; }
+.assistant-language { display: flex; align-items: center; padding: 0 9px; }
+.assistant-tools button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 8px; }
+.assistant-tools button:hover, .assistant-tools button.active { border-color: #79b98d; background: #e8f5eb; }
+.assistant-tools button:disabled { cursor: wait; opacity: .62; }
+.assistant-state, .assistant-error { display: flex; align-items: center; gap: 6px; margin: 0; padding: 7px 12px; font-size: 9px; }
+.assistant-state { color: #176b40; background: #eaf7ed; }
+.assistant-error { color: #963b30; background: #fff1ef; }
+.assistant-message-actions { display: flex; align-items: center; gap: 6px; }
+.assistant-message-actions .speak-button { width: 29px; height: 29px; padding: 0; display: grid; place-items: center; border: 1px solid #cee5d4; background: #fff; }
+.visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
+
+html[lang="ur"] h1, html[lang="ur"] h2, html[lang="ur"] h3, html[lang="ur"] p,
+html[lang="ur"] label, html[lang="ur"] nav button, html[lang="ur"] .eyebrow,
+html[lang="ur"] .section-header, html[lang="ur"] .assistant-panel,
+html[lang="ur"] .notification-panel { direction: rtl; text-align: right; }
+html[lang="ur"] input { direction: rtl; text-align: right; }
+html[lang="ur"] .price-table, html[lang="ur"] .earnings-grid,
+html[lang="ur"] .transaction-steps, html[lang="ur"] .recommendation-cta-row { direction: ltr; }
+html[lang="ur"] .assistant-question { margin-left: 0; margin-right: auto; direction: rtl; text-align: right; border-radius: 4px 12px 12px 12px; }
+
+/* Urdu keeps the application shell and card geometry stable while text reads RTL. */
+html[lang="ur"] .recommendation-icon { left: 18px; right: auto; }
+html[lang="ur"] .recommendation { padding-left: 62px; }
+html[lang="ur"] .transaction-card {
+  direction: ltr;
+}
+html[lang="ur"] .transaction-card > div:nth-child(2) {
+  min-width: 0;
+  direction: rtl;
+  text-align: left;
+}
+html[lang="ur"] .transaction-card > div:nth-child(2) > strong,
+html[lang="ur"] .transaction-card > div:nth-child(2) > p,
+html[lang="ur"] .transaction-card > div:nth-child(2) > small { direction: rtl; text-align: left; }
+html[lang="ur"] #transactions.section-header {
+  direction: ltr;
+  text-align: left;
+}
+html[lang="ur"] #transactions.section-header h2,
+html[lang="ur"] #transactions.section-header p { direction: rtl; text-align: left; }
+html[lang="ur"] .transaction-status {
+  direction: rtl;
+  text-align: center;
+}
+html[lang="ur"] .transaction-card .offer-actions {
+  direction: ltr;
+  justify-content: flex-end;
+}
+html[lang="ur"] .transaction-card .payment-detail { direction: rtl; unicode-bidi: plaintext; text-align: left; line-height: 1.65; }
+html[lang="ur"] .support-card {
+  direction: ltr;
+}
+html[lang="ur"] .support-card > div { direction: rtl; text-align: left; }
+html[lang="ur"] .support-card > div h3,
+html[lang="ur"] .support-card > div p { direction: rtl; text-align: left; }
+html[lang="ur"] .support-card form { direction: ltr; text-align: left; }
+html[lang="ur"] .support-card form input { direction: rtl; text-align: left; }
+
+@media (max-width: 700px) {
+  html[lang="ur"] .recommendation { padding-left: 20px; padding-top: 62px; }
+  html[lang="ur"] .recommendation-icon { left: 18px; top: 16px; }
+}
+
+@media (max-width: 900px) {
+  .top-actions { gap: 7px; }
+  .language-select { max-width: 104px; }
+}
+@media (max-width: 700px) {
+  .assistant-tools { grid-template-columns: minmax(92px, 1fr) auto auto; }
+  .assistant-tools button span { display: none; }
+  .language-select { width: 96px; }
+}

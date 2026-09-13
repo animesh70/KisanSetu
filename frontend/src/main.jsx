@@ -2,6 +2,15 @@ import { Component, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import App from './App.jsx';
+import './i18n';
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // The application remains usable when service workers are unavailable.
+    });
+  });
+}
 
 class AppErrorBoundary extends Component {
   state = { error: null };

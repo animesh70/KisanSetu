@@ -1,5 +1,8 @@
-import { Bot, MessageCircle, Send, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Bot, ImagePlus, MessageCircle, Mic, MicOff, Send, Volume2, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { api } from '../services/api';
+import { getSpeechLocale, LANGUAGE_OPTIONS } from '../i18n';
 
 const hasNumber = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
 const formatPrice = (value) => hasNumber(value) ? `₹${Number(value).toLocaleString('en-IN')}` : null;
@@ -121,7 +124,58 @@ function getFacts(context) {
   };
 }
 
-function response(intent, context, followUp, question = '') {
+function localizedResponse(intent, context, t) {
+  const facts = getFacts(context);
+  const recommendation = facts.recommendation;
+  const expectedNet = formatPerQuintal(recommendation.expectedNetPrice);
+  const buyer = facts.recommendedBuyer;
+  const market = facts.bestMarketOption || facts.highestDisplayedMarket;
+  const transaction = facts.activeTransaction;
+  const selected = facts.selectedService || (transaction?.logisticsProvider ? { provider: transaction.logisticsProvider } : null);
+  const actions = {
+    recommendation: [t('page.whyRecommendation'), 'recommendation'], market: [t('page.viewAllPrices'), 'market'],
+    buyer: [t('page.reviewOffers'), 'offers'], logistics: [t('page.logisticsOptions'), 'logistics'],
+    payment: [t('page.transactions'), 'transactions'], earnings: [t('page.whyRecommendation'), 'recommendation'],
+    lot: [t('page.createALot'), 'create-lot'], help: [t('page.whyRecommendation'), 'recommendation']
+  };
+  const [action, key] = actions[intent] || actions.help;
+
+  if (intent === 'recommendation') return {
+    intent, title: t('page.smartPrediction'),
+    message: `${recommendation.action === 'sell' ? t('page.sellNow') : t('page.holdBriefly')} · ${t('page.bestNetPrice')}: ${expectedNet || '—'}. ${t(recommendation.action === 'sell' ? 'page.sellReason' : 'page.holdReason')}`,
+    action, key
+  };
+  if (intent === 'market') return {
+    intent, title: t('page.bestMandiRate'),
+    message: market ? `${market.name || market.mandiName} · ${t('page.modalPrice')}: ${formatPerQuintal(numberFrom(market.grossPrice, market.modalPrice)) || '—'} · ${t('page.netPerQuintal')}: ${formatPerQuintal(numberFrom(market.netPrice, market.netRealisation)) || '—'}.` : t('page.marketDataNote'),
+    action, key
+  };
+  if (intent === 'buyer') return {
+    intent, title: t('page.buyersMatched'),
+    message: buyer ? `${buyer.name} · ${t('page.verifiedBuyerOffer')}: ${formatPerQuintal(buyer.offerPrice) || '—'} · ${t('page.matchScore')}: ${buyer.matchScore || '—'}%.` : t('page.noBuyer'),
+    action, key
+  };
+  if (intent === 'logistics') return {
+    intent, title: t('page.logisticsOptions'),
+    message: selected ? t('page.selectedConfirmation', { provider: selected.provider }) : `${facts.logistics.map((item) => item.provider).join(' · ') || t('page.notSpecified')}. ${t('page.select')}.`,
+    action, key
+  };
+  if (intent === 'payment') return {
+    intent, title: t('page.transactions'),
+    message: transaction ? `${t('page.payment')}: ${readableStatus(transaction.paymentStatus || transaction.status)} · ${t('page.farmerPayout')}: ${formatPrice(numberFrom(transaction.netPayable, transaction.amount)) || '—'}.` : t('page.noOffersDescription'),
+    action, key
+  };
+  if (intent === 'earnings') return {
+    intent, title: t('page.farmerPayout'), message: `${t('page.bestNetPrice')}: ${expectedNet || '—'}. ${t('page.earningsDescription')}`, action, key
+  };
+  if (intent === 'lot') return {
+    intent, title: t('page.createCropLot'), message: `${t('page.lotsDescription')} ${t('page.quantityFit')} · ${t('page.qualityGrade')} · ${t('page.pickupLocation')}.`, action, key
+  };
+  return { intent: 'help', title: t('assistant.hello'), message: t('assistant.intro'), action, key };
+}
+
+function response(intent, context, followUp, question = '', t) {
+  if (t) return localizedResponse(intent, context, t);
   const facts = getFacts(context);
   const query = normalise(question);
   const cropDescription = [facts.filters.crop, hasNumber(facts.filters.quantity) ? `${facts.filters.quantity} q` : null].filter(Boolean).join(' · ');
@@ -294,23 +348,138 @@ function response(intent, context, followUp, question = '') {
 }
 
 export default function KisanAssistant({ context, onAction }) {
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [lastIntent, setLastIntent] = useState('');
-  const suggestions = useMemo(() => ['Should I sell now?', 'Which market is best?', 'Show buyer offers', 'How does payment work?'], []);
-  const ask = (question) => {
+  const [listening, setListening] = useState(false);
+  const [analysing, setAnalysing] = useState(false);
+  const [voiceError, setVoiceError] = useState('');
+  const recognitionRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const suggestions = useMemo(() => {
+    const translated = t('assistant.suggestions', { returnObjects: true });
+    return Array.isArray(translated) ? translated : [];
+  }, [t, i18n.language]);
+  const selectedLanguage = LANGUAGE_OPTIONS.find((language) => language.code === i18n.language) || LANGUAGE_OPTIONS[0];
+
+  useEffect(() => () => {
+    recognitionRef.current?.abort?.();
+    window.speechSynthesis?.cancel?.();
+  }, []);
+
+  const speak = (text) => {
+    if (!('speechSynthesis' in window) || !text) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = getSpeechLocale(i18n.language);
+    const languagePrefix = utterance.lang.split('-')[0].toLowerCase();
+    const matchingVoice = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith(languagePrefix));
+    if (matchingVoice) utterance.voice = matchingVoice;
+    utterance.rate = 0.92;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const ask = async (question, forcedIntent = '') => {
     const clean = String(question || input).trim();
     if (!clean) return;
-    const resolved = resolveIntent(clean, lastIntent, context);
-    const nextMessage = response(resolved.id, context, resolved.followUp, clean);
+    const resolved = forcedIntent ? { id: forcedIntent === 'price' ? 'recommendation' : forcedIntent, followUp: null } : resolveIntent(clean, lastIntent, context);
+    let nextMessage = response(resolved.id, context, resolved.followUp, clean, t);
+    if (forcedIntent === 'price' || /predict|forecast|future price|price prediction/i.test(clean)) {
+      try {
+        const result = await api.getAdvisorPrice(context?.filters?.crop || 'Onion', 7);
+        nextMessage = {
+          intent: 'recommendation',
+          title: `${result.crop} · ${t('page.priceTrend')}`,
+          message: `${t('page.currentPrice')}: ${formatPerQuintal(result.currentPrice)} · ${t('page.forecastPeak')}: ${formatPerQuintal(result.predictedPeak)}. ${t(result.recommendation === 'hold' ? 'page.holdReason' : 'page.sellReason')} ${t('page.forecastDisclaimer')}`,
+          action: t('page.whyRecommendation'),
+          key: 'recommendation'
+        };
+      } catch (error) {
+        nextMessage = { ...nextMessage, message: `${nextMessage.message} ${t('assistant.disclaimer')}` };
+      }
+    }
     setMessages((current) => [...current, { role: 'farmer', text: clean }, { role: 'assistant', ...nextMessage }]);
     setLastIntent(nextMessage.intent);
     setInput('');
   };
 
+  const toggleListening = () => {
+    if (listening) {
+      recognitionRef.current?.stop?.();
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceError(t('assistant.unsupported'));
+      return;
+    }
+    setVoiceError('');
+    const recognition = new SpeechRecognition();
+    recognition.lang = getSpeechLocale(i18n.language);
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = (event) => {
+      setListening(false);
+      setVoiceError(t('assistant.unsupported'));
+    };
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      if (transcript) {
+        setInput(transcript);
+        ask(transcript);
+      }
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const analyseImage = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      setVoiceError(t('assistant.disclaimer'));
+      return;
+    }
+    if (file.size > 6 * 1024 * 1024) {
+      setVoiceError(t('assistant.disclaimer'));
+      return;
+    }
+    setAnalysing(true);
+    setVoiceError('');
+    try {
+      const result = await api.analyzeCropImage(file, context?.filters?.crop);
+      setMessages((current) => [...current,
+        { role: 'farmer', text: `${t('assistant.photo')}: ${file.name}` },
+        { role: 'assistant', intent: 'disease', title: `${t('assistant.photo')} · ${result.result}`, message: `${result.confidence}% · ${t('assistant.disclaimer')}`, action: t('page.whyRecommendation'), key: 'recommendation' }
+      ]);
+    } catch (error) {
+      setVoiceError(t('assistant.disclaimer'));
+    } finally {
+      setAnalysing(false);
+    }
+  };
+
   return <aside className={`kisan-assistant ${open ? 'open' : ''}`} aria-label="KisanSetu Assistant">
-    {open && <section className="assistant-panel"><header><span className="assistant-avatar"><Bot size={18}/></span><div><strong>KisanSetu Assistant</strong><small>Uses your current demo dashboard data</small></div><button type="button" aria-label="Close assistant" onClick={() => setOpen(false)}><X size={18}/></button></header><div className="assistant-messages" aria-live="polite">{messages.length ? messages.map((message, index) => message.role === 'farmer' ? <p className="assistant-question" key={index}>{message.text}</p> : <article key={index}><strong>{message.title}</strong><p>{message.message}</p><button type="button" onClick={() => onAction(message.key)}>{message.action}</button></article>) : <article><strong>How can I help?</strong><p>I can explain the best selling decision using your selected crop, nearby markets, buyer offers, logistics and payment status.</p></article>}</div><div className="assistant-suggestions">{suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => ask(suggestion)}>{suggestion}</button>)}</div><form onSubmit={(event) => { event.preventDefault(); ask(); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about your sale…" aria-label="Ask KisanSetu Assistant"/><button aria-label="Send question"><Send size={16}/></button></form><p className="assistant-disclaimer">Demo assistant: deterministic guidance based on the displayed sample data, not live market advice.</p></section>}
-    <button type="button" className="assistant-fab" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X size={21}/> : <MessageCircle size={22}/>}<span>{open ? 'Close' : 'Ask KisanSetu'}</span></button>
+    {open && <section className="assistant-panel">
+      <header><span className="assistant-avatar"><Bot size={18}/></span><div><strong>{t('assistant.title')}</strong><small>{t('assistant.subtitle')}</small></div><button type="button" aria-label={t('assistant.close')} onClick={() => setOpen(false)}><X size={18}/></button></header>
+      <div className="assistant-tools">
+        <span className="assistant-language" aria-label={t('page.language')}>{selectedLanguage.label}</span>
+        <button type="button" className={listening ? 'active' : ''} onClick={toggleListening}>{listening ? <MicOff size={14}/> : <Mic size={14}/>}<span>{listening ? t('assistant.stop') : t('assistant.listen')}</span></button>
+        <button type="button" disabled={analysing} onClick={() => fileInputRef.current?.click()}><ImagePlus size={14}/><span>{analysing ? t('assistant.analyzing') : t('assistant.photo')}</span></button>
+        <input ref={fileInputRef} className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={analyseImage}/>
+      </div>
+      {listening && <p className="assistant-state"><Mic size={13}/>{t('assistant.listening')}</p>}
+      {voiceError && <p className="assistant-error" role="alert">{voiceError}</p>}
+      <div className="assistant-messages" aria-live="polite">{messages.length ? messages.map((message, index) => message.role === 'farmer' ? <p className="assistant-question" key={index}>{message.text}</p> : <article key={index}><strong>{message.title}</strong><p>{message.message}</p><div className="assistant-message-actions"><button type="button" onClick={() => onAction(message.key)}>{message.action}</button><button type="button" className="speak-button" aria-label={t('assistant.read')} onClick={() => speak(`${message.title}. ${message.message}`)}><Volume2 size={14}/></button></div></article>) : <article><strong>{t('assistant.hello')}</strong><p>{t('assistant.intro')}</p></article>}</div>
+      <div className="assistant-suggestions">{suggestions.map((suggestion, index) => <button type="button" key={suggestion} onClick={() => index === 3 ? fileInputRef.current?.click() : ask(suggestion, ['recommendation', 'price', 'market'][index])}>{suggestion}</button>)}</div>
+      <form onSubmit={(event) => { event.preventDefault(); ask(); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={t('assistant.placeholder')} aria-label={t('assistant.title')}/><button aria-label={t('page.submit')}><Send size={16}/></button></form>
+      <p className="assistant-disclaimer">{t('assistant.disclaimer')}</p>
+    </section>}
+    <button type="button" className="assistant-fab" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X size={21}/> : <MessageCircle size={22}/>}<span>{open ? t('assistant.close') : t('assistant.open')}</span></button>
   </aside>;
 }

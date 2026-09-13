@@ -37,6 +37,9 @@ Farmer/FPO → Market prices and forecast → Crop lot → Buyer matches → Off
 - Transaction steps: pickup → transit → delivery → payment confirmation
 - Payment amount, demo payment method, status, and reference ID
 - Mobile navigation drawer, responsive forms, notification centre, and floating action feedback
+- **AI Crop & Price Advisor** with browser voice input/output, a seven-day advisor endpoint, and validated crop-image uploads. Image results are deliberately labelled as mock screening, not a real agronomic diagnosis.
+- **12-language i18next interface**: English, Hindi, Marathi, Urdu, Turkish, Spanish, Punjabi, Odia, Bengali, Gujarati, Telugu, and Tamil. Urdu also switches the page to an RTL-aware layout.
+- **Offline-first PWA shell** with an install manifest, service worker, offline page, connection indicator, and cached read-only market/API responses. Transaction-changing actions remain network-only.
 
 ## Data transparency
 
@@ -53,6 +56,8 @@ This prototype intentionally labels its demo data in the interface:
 | --- | --- | --- |
 | Health | `GET /api/health` | Confirm the API is available. |
 | Markets | `GET /api/markets/prices?crop=Onion&quantity=100`, `/trends`, `/forecast` | Demo prices, capacity-aware transport/net estimates, trend, and forecast. |
+| Price advisor | `GET /api/advisor/price?crop=Onion&days=7` | Normalized prototype price outlook and sell/hold signal. |
+| Crop image advisor | `POST /api/advisor/disease?crop=Tomato` | Accept a JPG, PNG, or WebP body (maximum 6 MB) and return a clearly labelled mock screening result. |
 | Crop lots | `GET/POST /api/lots` | View or publish a farmer crop lot. |
 | Recommendations | `GET /api/recommendations/sell` | Storage-aware sell/hold recommendation and net-price options. |
 | Buyers | `GET /api/buyers?crop=Tomato` | Demo buyers, optionally filtered to the selected crop. |
@@ -95,6 +100,8 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. Keep the backend running to use crop-lot publishing, offers, transactions, and payment tracking. The market dashboard can show curated fallback data if the backend is unavailable.
+
+The browser can install KisanSetu as a PWA after the first successful load. Voice recognition depends on browser Web Speech support and microphone permission. Voice output uses the best installed system voice matching the selected language; exact voice availability varies by device. Previously opened pages and successful GET responses can be read from cache when offline, while lot, offer, logistics, and payment mutations correctly require connectivity.
 
 For a production build check:
 

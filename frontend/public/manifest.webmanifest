@@ -1,0 +1,13 @@
+{
+  "name": "KisanSetu — Crop & Price Advisor",
+  "short_name": "KisanSetu",
+  "description": "Farmer price discovery, crop guidance, buyer matching and transaction tracking.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f8f5",
+  "theme_color": "#1f7a4d",
+  "orientation": "any",
+  "icons": [
+    { "src": "/kisansetu-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

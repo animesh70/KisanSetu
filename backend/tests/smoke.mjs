@@ -5,6 +5,7 @@ const checks = [
   ['/markets/prices?crop=Onion', 200],
   ['/markets/trends?crop=Onion', 200],
   ['/markets/forecast?crop=Onion', 200],
+  ['/advisor/price?crop=Onion&days=7', 200],
   ['/recommendations/sell?crop=Onion&quantity=100&grade=A', 200],
   ['/buyers', 200],
   ['/lots', 200]
@@ -15,4 +16,16 @@ for (const [path, expectedStatus] of checks) {
   if (response.status !== expectedStatus) throw new Error(`${path}: expected ${expectedStatus}, received ${response.status}`);
   console.log(`✓ ${path}`);
 }
+
+const diseaseResponse = await fetch(`${baseUrl}/advisor/disease?crop=Tomato`, {
+  method: 'POST',
+  headers: { 'content-type': 'image/png', 'x-file-name': 'smoke-test.png' },
+  body: Buffer.alloc(256, 7)
+});
+if (diseaseResponse.status !== 200) throw new Error(`/advisor/disease: expected 200, received ${diseaseResponse.status}`);
+const diseaseResult = await diseaseResponse.json();
+if (diseaseResult.analysisMode !== 'mock-image-advisor' || diseaseResult.requiresExpertConfirmation !== true) {
+  throw new Error('/advisor/disease did not return the required transparent prototype labels');
+}
+console.log('✓ /advisor/disease');
 console.log('KisanSetu API smoke test passed.');

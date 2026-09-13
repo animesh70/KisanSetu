@@ -9,6 +9,7 @@ import marketRoutes from './routes/marketRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
 import offerRoutes from './routes/offerRoutes.js';
 import supportRoutes from './routes/supportRoutes.js';
+import advisorRoutes from './routes/advisorRoutes.js';
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
@@ -21,6 +22,7 @@ app.use('/api/lots', lotRoutes);
 app.use('/api/buyers', buyerRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/recommendations', matchRoutes);
+app.use('/api/advisor', advisorRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api', supportRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
