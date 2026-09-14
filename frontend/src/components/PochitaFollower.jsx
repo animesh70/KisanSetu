@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Adapted from Amber Bisht's PochitaFollower component. The Oneko animation
+// KisanSetu follower integration by animesh70. The original Oneko animation
 // and sprite coordinates are intentionally preserved.
 export default function PochitaFollower() {
   const [isMounted, setIsMounted] = useState(false);

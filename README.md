@@ -130,7 +130,7 @@ The KisanSetu Advisor can control the optional pixel-art Oneko follower directly
 
 Commands are trimmed, case-insensitive, handled entirely in the frontend, and never sent to an AI or backend endpoint. Repeated ON commands do not create duplicate instances. The React adaptation is in `frontend/src/components/PochitaFollower.jsx`, and the original sprite sheet is served from `frontend/public/oneko.gif` with `pointer-events: none` so it never blocks the interface.
 
-The follower implementation was adapted from [Amber Bisht's portfolio component](https://github.com/Amber-bisht/amberbisht.me), which builds on the MIT-licensed [oneko.js](https://github.com/adryd325/oneko.js) project.
+The KisanSetu follower integration is maintained by [animesh70](https://github.com/animesh70) and builds on the MIT-licensed [oneko.js](https://github.com/adryd325/oneko.js) project.
 
 ## Run the ML price-prediction service
 
