@@ -40,6 +40,7 @@ Farmer/FPO → Market prices and forecast → Crop lot → Buyer matches → Off
 - **AI Crop & Price Advisor** with browser microphone input, Azure-generated multilingual read-aloud audio, a seven-day advisor endpoint, and validated crop-image uploads. Image results are deliberately labelled as mock screening, not a real agronomic diagnosis.
 - **12-language i18next interface**: English, Hindi, Marathi, Urdu, Turkish, Spanish, Punjabi, Odia, Bengali, Gujarati, Telugu, and Tamil. Urdu also switches the page to an RTL-aware layout.
 - **Offline-first PWA shell** with an install manifest, service worker, offline page, connection indicator, and cached read-only market/API responses. Transaction-changing actions remain network-only.
+- **Chat-controlled Oneko kitty** that can be enabled or disabled with deterministic local commands without sending those commands to the backend.
 
 ## Data transparency
 
@@ -118,6 +119,18 @@ For a production build check:
 ```powershell
 npm run build
 ```
+
+### Chat-controlled kitty effect
+
+The KisanSetu Advisor can control the optional pixel-art Oneko follower directly from the normal chat input:
+
+- `kitty effect on` — show one kitty near the top-right; it follows the pointer and uses the original directional, idle, sleeping, and scratching animations.
+- `kitty effect off` — immediately hide the kitty and clean up its mouse listener and animation frame.
+- Optional aliases: `kitty on`, `enable kitty`, `kitty off`, and `disable kitty`.
+
+Commands are trimmed, case-insensitive, handled entirely in the frontend, and never sent to an AI or backend endpoint. Repeated ON commands do not create duplicate instances. The React adaptation is in `frontend/src/components/PochitaFollower.jsx`, and the original sprite sheet is served from `frontend/public/oneko.gif` with `pointer-events: none` so it never blocks the interface.
+
+The follower implementation was adapted from [Amber Bisht's portfolio component](https://github.com/Amber-bisht/amberbisht.me), which builds on the MIT-licensed [oneko.js](https://github.com/adryd325/oneko.js) project.
 
 ## Run the ML price-prediction service
 
