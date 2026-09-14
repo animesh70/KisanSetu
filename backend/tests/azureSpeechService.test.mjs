@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { TTS_LANGUAGES } from '../config/ttsLanguages.js';
-import { buildSsml, clearSpeechCache, escapeSsml, prepareSpeechContent, SpeechServiceError, synthesizeSpeech } from '../services/azureSpeechService.js';
+import { buildSsml, clearSpeechCache, createSpeechCacheKey, escapeSsml, prepareSpeechContent, SpeechServiceError, synthesizeSpeech } from '../services/azureSpeechService.js';
 import { MAX_TTS_TEXT_LENGTH, validateTtsRequest } from '../routes/ttsRoutes.js';
 
 const expectedLanguages = {
@@ -90,12 +90,16 @@ test('Azure authentication, rate limit, and malformed responses are normalized',
   await assert.rejects(() => attempt(200), (error) => error.code === 'INVALID_AZURE_RESPONSE');
 });
 
-test('identical language and text reuse the bounded in-memory audio cache', async () => {
+function successfulAudioResponse(bytes = [7, 8, 9]) {
+  return new Response(new Uint8Array(bytes), { status: 200, headers: { 'content-type': 'audio/mpeg' } });
+}
+
+test('cache A: same language, configured voice, and text call Azure once', async () => {
   clearSpeechCache();
   let calls = 0;
   const fetchImpl = async () => {
     calls += 1;
-    return new Response(new Uint8Array([7, 8, 9]), { status: 200, headers: { 'content-type': 'audio/mpeg' } });
+    return successfulAudioResponse();
   };
   const request = { text: 'தமிழ் விலை ₹2,450', language: 'ta', key: 'test-key', region: 'centralindia', fetchImpl };
   const first = await synthesizeSpeech(request);
@@ -103,6 +107,83 @@ test('identical language and text reuse the bounded in-memory audio cache', asyn
   assert.equal(first.cached, false);
   assert.equal(second.cached, true);
   assert.equal(calls, 1);
+});
+
+test('cache B: ten sequential identical requests call Azure once', async () => {
+  clearSpeechCache();
+  let calls = 0;
+  const request = {
+    text: 'ମୁଁ ଜଣେ ପୁଅ', language: 'or', key: 'test-key', region: 'centralindia',
+    fetchImpl: async () => { calls += 1; return successfulAudioResponse(); }
+  };
+  const results = [];
+  for (let index = 0; index < 10; index += 1) results.push(await synthesizeSpeech(request));
+  assert.equal(calls, 1);
+  assert.equal(results[0].cached, false);
+  assert.ok(results.slice(1).every((result) => result.cached));
+});
+
+test('cache C: two concurrent identical requests share one Azure synthesis', async () => {
+  clearSpeechCache();
+  let calls = 0;
+  let finishRequest;
+  const fetchImpl = () => {
+    calls += 1;
+    return new Promise((resolve) => { finishRequest = () => resolve(successfulAudioResponse()); });
+  };
+  const request = { text: 'Concurrent speech', language: 'en', key: 'test-key', region: 'centralindia', fetchImpl };
+  const first = synthesizeSpeech(request);
+  const second = synthesizeSpeech(request);
+  assert.equal(calls, 1);
+  finishRequest();
+  const [firstResult, secondResult] = await Promise.all([first, second]);
+  assert.deepEqual(firstResult.audio, secondResult.audio);
+});
+
+test('failed in-flight synthesis is removed so a later retry can run', async () => {
+  clearSpeechCache();
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    if (calls === 1) throw new Error('temporary network failure');
+    return successfulAudioResponse();
+  };
+  const request = { text: 'Retry after failure', language: 'en', key: 'test-key', region: 'centralindia', fetchImpl };
+  await assert.rejects(() => synthesizeSpeech(request), (error) => error.code === 'TTS_NETWORK_ERROR');
+  const retry = await synthesizeSpeech(request);
+  assert.equal(retry.cached, false);
+  assert.equal(calls, 2);
+});
+
+test('cache D: same text in different languages synthesizes separately', async () => {
+  clearSpeechCache();
+  let calls = 0;
+  const fetchImpl = async () => { calls += 1; return successfulAudioResponse([calls]); };
+  const common = { text: 'Price 2450', key: 'test-key', region: 'centralindia', fetchImpl };
+  await synthesizeSpeech({ ...common, language: 'en' });
+  await synthesizeSpeech({ ...common, language: 'or' });
+  assert.equal(calls, 2);
+});
+
+test('cache E: changing the configured voice changes the cache key', () => {
+  const first = createSpeechCacheKey('en', 'en-IN-NeerjaNeural', 'Same text');
+  const second = createSpeechCacheKey('en', 'en-IN-PrabhatNeural', 'Same text');
+  assert.notEqual(first, second);
+  assert.equal(first, createSpeechCacheKey('en', 'en-IN-NeerjaNeural', 'Same text'));
+});
+
+test('cache F: different text creates a different cache entry', async () => {
+  clearSpeechCache();
+  let calls = 0;
+  const fetchImpl = async () => { calls += 1; return successfulAudioResponse([calls]); };
+  const common = { language: 'en', key: 'test-key', region: 'centralindia', fetchImpl };
+  await synthesizeSpeech({ ...common, text: 'First sentence' });
+  await synthesizeSpeech({ ...common, text: 'Second sentence' });
+  assert.equal(calls, 2);
+  assert.notEqual(
+    createSpeechCacheKey('en', 'en-IN-NeerjaNeural', 'First sentence'),
+    createSpeechCacheKey('en', 'en-IN-NeerjaNeural', 'Second sentence')
+  );
 });
 
 test('Azure timeouts and unsafe region configuration return normalized errors', async () => {

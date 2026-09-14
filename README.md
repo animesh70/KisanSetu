@@ -93,6 +93,8 @@ AZURE_SPEECH_REGION=your-resource-region
 
 Never prefix the key with `VITE_`, place it in frontend code, or commit the local `.env`. Without these values the rest of KisanSetu continues to work, while read-aloud returns a localized temporary-unavailable message.
 
+TTS audio uses two bounded in-memory cache layers. The frontend keeps up to 75 returned MP3 `Blob` objects per page session and reuses them for the exact same language and text; it creates and revokes a temporary object URL for every playback. The backend keeps up to 200 voice-aware MP3 entries for 24 hours and coalesces identical requests that arrive while Azure synthesis is still running. **The backend TTS cache is memory-only and resets when the backend process restarts or redeploys.** No persistent cache or Redis service is used.
+
 The API runs at `http://localhost:5000`. Try `GET /api/health` or `GET /api/markets/prices?crop=Onion`.
 
 With the API running, verify the core endpoints in a second terminal:

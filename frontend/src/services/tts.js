@@ -1,4 +1,5 @@
 import { api } from './api';
+import { getOrFetchTtsBlob } from './ttsCache';
 
 let activeSpeech = null;
 
@@ -33,7 +34,11 @@ export async function speakText(text, language, { onStateChange } = {}) {
   onStateChange?.('loading');
 
   try {
-    const audioBlob = await api.synthesizeSpeech(text, language, state.controller.signal);
+    const audioBlob = await getOrFetchTtsBlob(
+      language,
+      text,
+      () => api.synthesizeSpeech(text, language, state.controller.signal)
+    );
     if (state.cancelled || activeSpeech !== state) return false;
     state.objectUrl = URL.createObjectURL(audioBlob);
     state.audio = new Audio(state.objectUrl);

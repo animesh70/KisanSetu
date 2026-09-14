@@ -3,9 +3,11 @@ import { getTtsLanguage } from '../config/ttsLanguages.js';
 
 const AZURE_OUTPUT_FORMAT = 'audio-24khz-48kbitrate-mono-mp3';
 const REQUEST_TIMEOUT_MS = 12_000;
-const CACHE_TTL_MS = 10 * 60 * 1000;
-const CACHE_MAX_ITEMS = 40;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const CACHE_MAX_ITEMS = 200;
+const IN_FLIGHT_MAX_ITEMS = 200;
 const audioCache = new Map();
+const inFlight = new Map();
 
 const SPOKEN_PRICE_LABELS = Object.freeze({
   en: Object.freeze({ currency: 'rupees', perQuintal: 'rupees per quintal', decimal: 'point' }),
@@ -70,8 +72,8 @@ export function buildSsml(text, language) {
   return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${config.locale}"><voice name="${config.voice}">${prepareSpeechContent(text, language)}</voice></speak>`;
 }
 
-function cacheKey(language, text) {
-  return createHash('sha256').update(language).update('\0').update(text).digest('hex');
+export function createSpeechCacheKey(language, voice, text) {
+  return createHash('sha256').update(language).update('|').update(voice).update('|').update(text).digest('hex');
 }
 
 function readCache(key, now = Date.now()) {
@@ -93,25 +95,10 @@ function writeCache(key, audio, now = Date.now()) {
 
 export function clearSpeechCache() {
   audioCache.clear();
+  inFlight.clear();
 }
 
-export async function synthesizeSpeech({
-  text,
-  language,
-  fetchImpl = globalThis.fetch,
-  key = process.env.AZURE_SPEECH_KEY,
-  region = process.env.AZURE_SPEECH_REGION,
-  timeoutMs = REQUEST_TIMEOUT_MS
-}) {
-  if (!key || !region || !/^[a-z0-9-]+$/i.test(region)) throw new SpeechServiceError('TTS_NOT_CONFIGURED', 503, 'Speech playback is temporarily unavailable.');
-  if (typeof fetchImpl !== 'function') throw new SpeechServiceError('TTS_NETWORK_ERROR', 503, 'Speech playback is temporarily unavailable.');
-
-  const config = getTtsLanguage(language);
-  if (!config) throw new SpeechServiceError('UNSUPPORTED_LANGUAGE', 400, 'The selected speech language is not supported.');
-  const keyHash = cacheKey(language, text);
-  const cached = readCache(keyHash);
-  if (cached) return { audio: cached, cached: true, config };
-
+async function requestAzureSpeech({ text, language, config, fetchImpl, key, region, timeoutMs, keyHash }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   let response;
@@ -148,4 +135,34 @@ export async function synthesizeSpeech({
 
   writeCache(keyHash, audio);
   return { audio, cached: false, config };
+}
+
+export async function synthesizeSpeech({
+  text,
+  language,
+  fetchImpl = globalThis.fetch,
+  key = process.env.AZURE_SPEECH_KEY,
+  region = process.env.AZURE_SPEECH_REGION,
+  timeoutMs = REQUEST_TIMEOUT_MS
+}) {
+  if (!key || !region || !/^[a-z0-9-]+$/i.test(region)) throw new SpeechServiceError('TTS_NOT_CONFIGURED', 503, 'Speech playback is temporarily unavailable.');
+  if (typeof fetchImpl !== 'function') throw new SpeechServiceError('TTS_NETWORK_ERROR', 503, 'Speech playback is temporarily unavailable.');
+
+  const config = getTtsLanguage(language);
+  if (!config) throw new SpeechServiceError('UNSUPPORTED_LANGUAGE', 400, 'The selected speech language is not supported.');
+  const keyHash = createSpeechCacheKey(language, config.voice, text);
+  const cached = readCache(keyHash);
+  if (cached) return { audio: cached, cached: true, config };
+
+  const existingRequest = inFlight.get(keyHash);
+  if (existingRequest) return existingRequest;
+  if (inFlight.size >= IN_FLIGHT_MAX_ITEMS) throw new SpeechServiceError('TTS_BUSY', 503, 'Speech service is busy. Please try again shortly.');
+
+  const request = requestAzureSpeech({ text, language, config, fetchImpl, key, region, timeoutMs, keyHash });
+  inFlight.set(keyHash, request);
+  try {
+    return await request;
+  } finally {
+    if (inFlight.get(keyHash) === request) inFlight.delete(keyHash);
+  }
 }
