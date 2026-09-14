@@ -92,6 +92,7 @@ main { margin-left: 252px; width: calc(100% - 252px); max-width: 1600px; padding
 .assistant-error { color: #963b30; background: #fff1ef; }
 .assistant-message-actions { display: flex; align-items: center; gap: 6px; }
 .assistant-message-actions .speak-button { width: 29px; height: 29px; padding: 0; display: grid; place-items: center; border: 1px solid #cee5d4; background: #fff; }
+.assistant-message-actions .speak-button.active { color: #fff; border-color: #258451; background: #258451; }
 .visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
 
 html[lang="ur"] h1, html[lang="ur"] h2, html[lang="ur"] h3, html[lang="ur"] p,

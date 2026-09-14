@@ -13,6 +13,24 @@ async function request(path, options = {}) {
   return response.json();
 }
 
+async function requestAudio(path, options = {}) {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers }
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const message = typeof payload.error?.message === 'string' ? payload.error.message : typeof payload.message === 'string' ? payload.message : 'Speech playback is temporarily unavailable.';
+    const error = new Error(message);
+    error.code = payload.error?.code || 'TTS_REQUEST_FAILED';
+    error.status = response.status;
+    throw error;
+  }
+  const audio = await response.blob();
+  if (!audio.size || !audio.type.toLowerCase().startsWith('audio/')) throw new Error('INVALID_AUDIO_RESPONSE');
+  return audio;
+}
+
 export const api = {
   getPrices: (crop, district, quantity) => request(`/markets/prices?crop=${encodeURIComponent(crop)}${district ? `&district=${encodeURIComponent(district)}` : ''}${quantity !== undefined && quantity !== '' ? `&quantity=${encodeURIComponent(quantity)}` : ''}`),
   getTrend: (crop) => request(`/markets/trends?crop=${encodeURIComponent(crop)}`),
@@ -23,6 +41,7 @@ export const api = {
     headers: { 'Content-Type': file.type || 'application/octet-stream', 'x-file-name': encodeURIComponent(file.name || 'crop-image') },
     body: file
   }),
+  synthesizeSpeech: (text, language, signal) => requestAudio('/tts', { method: 'POST', body: JSON.stringify({ text, language }), signal }),
   getRecommendation: ({ crop, quantity, grade }) => request(`/recommendations/sell?crop=${encodeURIComponent(crop)}&quantity=${quantity}&grade=${grade}`),
   getBuyers: (crop) => request(`/buyers${crop ? `?crop=${encodeURIComponent(crop)}` : ''}`),
   getLots: () => request('/lots'),

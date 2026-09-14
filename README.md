@@ -37,7 +37,7 @@ Farmer/FPO → Market prices and forecast → Crop lot → Buyer matches → Off
 - Transaction steps: pickup → transit → delivery → payment confirmation
 - Payment amount, demo payment method, status, and reference ID
 - Mobile navigation drawer, responsive forms, notification centre, and floating action feedback
-- **AI Crop & Price Advisor** with browser voice input/output, a seven-day advisor endpoint, and validated crop-image uploads. Image results are deliberately labelled as mock screening, not a real agronomic diagnosis.
+- **AI Crop & Price Advisor** with browser microphone input, Azure-generated multilingual read-aloud audio, a seven-day advisor endpoint, and validated crop-image uploads. Image results are deliberately labelled as mock screening, not a real agronomic diagnosis.
 - **12-language i18next interface**: English, Hindi, Marathi, Urdu, Turkish, Spanish, Punjabi, Odia, Bengali, Gujarati, Telugu, and Tamil. Urdu also switches the page to an RTL-aware layout.
 - **Offline-first PWA shell** with an install manifest, service worker, offline page, connection indicator, and cached read-only market/API responses. Transaction-changing actions remain network-only.
 
@@ -58,6 +58,7 @@ This prototype intentionally labels its demo data in the interface:
 | Markets | `GET /api/markets/prices?crop=Onion&quantity=100`, `/trends`, `/forecast` | Demo prices, capacity-aware transport/net estimates, trend, and forecast. |
 | Price advisor | `GET /api/advisor/price?crop=Onion&days=7` | Normalized prototype price outlook and sell/hold signal. |
 | Crop image advisor | `POST /api/advisor/disease?crop=Tomato` | Accept a JPG, PNG, or WebP body (maximum 6 MB) and return a clearly labelled mock screening result. |
+| Azure speech | `POST /api/tts` | Convert exact localized assistant text into MP3 using the whitelisted Azure voice for the selected language. |
 | Crop lots | `GET/POST /api/lots` | View or publish a farmer crop lot. |
 | Recommendations | `GET /api/recommendations/sell` | Storage-aware sell/hold recommendation and net-price options. |
 | Buyers | `GET /api/buyers?crop=Tomato` | Demo buyers, optionally filtered to the selected crop. |
@@ -82,6 +83,15 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
+For multilingual read-aloud, add a Microsoft Azure Speech resource and configure these **backend-only** values in `backend/.env` and in the deployed backend service environment:
+
+```text
+AZURE_SPEECH_KEY=your-server-side-speech-key
+AZURE_SPEECH_REGION=your-resource-region
+```
+
+Never prefix the key with `VITE_`, place it in frontend code, or commit the local `.env`. Without these values the rest of KisanSetu continues to work, while read-aloud returns a localized temporary-unavailable message.
+
 The API runs at `http://localhost:5000`. Try `GET /api/health` or `GET /api/markets/prices?crop=Onion`.
 
 With the API running, verify the core endpoints in a second terminal:
@@ -101,7 +111,7 @@ npm run dev
 
 Open `http://localhost:5173`. Keep the backend running to use crop-lot publishing, offers, transactions, and payment tracking. The market dashboard can show curated fallback data if the backend is unavailable.
 
-The browser can install KisanSetu as a PWA after the first successful load. Voice recognition depends on browser Web Speech support and microphone permission. Voice output uses the best installed system voice matching the selected language; exact voice availability varies by device. Previously opened pages and successful GET responses can be read from cache when offline, while lot, offer, logistics, and payment mutations correctly require connectivity.
+The browser can install KisanSetu as a PWA after the first successful load. Microphone speech recognition still depends on browser Web Speech support and permission. Read-aloud does **not** depend on installed device voices: the backend sends the exact localized text to Microsoft Azure Speech and the browser only plays the returned MP3. Speech generation requires an internet connection and valid backend Azure configuration. Previously opened pages and successful GET responses can be read from cache when offline, while lot, offer, logistics, payment, and speech-generation requests correctly require connectivity.
 
 For a production build check:
 

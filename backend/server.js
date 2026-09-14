@@ -10,6 +10,7 @@ import matchRoutes from './routes/matchRoutes.js';
 import offerRoutes from './routes/offerRoutes.js';
 import supportRoutes from './routes/supportRoutes.js';
 import advisorRoutes from './routes/advisorRoutes.js';
+import ttsRoutes from './routes/ttsRoutes.js';
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
@@ -23,7 +24,14 @@ app.use('/api/buyers', buyerRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/recommendations', matchRoutes);
 app.use('/api/advisor', advisorRoutes);
+app.use('/api/tts', ttsRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api', supportRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
+app.use((error, req, res, next) => {
+  if (error?.type === 'entity.parse.failed') return res.status(400).json({ error: { code: 'INVALID_JSON', message: 'The request body must contain valid JSON.' } });
+  if (error?.type === 'entity.too.large') return res.status(413).json({ error: { code: 'REQUEST_TOO_LARGE', message: 'The request body is too large.' } });
+  console.error('Unhandled API error:', error?.name || 'Error');
+  return res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'This request could not be completed.' } });
+});
 app.listen(process.env.PORT || 5000, () => console.log(`KisanSetu API running on port ${process.env.PORT || 5000}`));

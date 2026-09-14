@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import { getSpeechLocale, LANGUAGE_OPTIONS } from '../i18n';
+import { speakText, stopSpeech } from '../services/tts';
+import { getKittyCommand } from '../services/kittyCommands';
 
 const hasNumber = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
 const formatPrice = (value) => hasNumber(value) ? `₹${Number(value).toLocaleString('en-IN')}` : null;
@@ -347,7 +349,7 @@ function response(intent, context, followUp, question = '', t) {
   };
 }
 
-export default function KisanAssistant({ context, onAction }) {
+export default function KisanAssistant({ context, onAction, kittyEnabled, onKittyCommand }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -355,6 +357,7 @@ export default function KisanAssistant({ context, onAction }) {
   const [lastIntent, setLastIntent] = useState('');
   const [listening, setListening] = useState(false);
   const [analysing, setAnalysing] = useState(false);
+  const [speakingMessage, setSpeakingMessage] = useState(null);
   const [voiceError, setVoiceError] = useState('');
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -366,26 +369,67 @@ export default function KisanAssistant({ context, onAction }) {
 
   useEffect(() => () => {
     recognitionRef.current?.abort?.();
-    window.speechSynthesis?.cancel?.();
+    stopSpeech();
   }, []);
+  useEffect(() => {
+    stopSpeech();
+    setSpeakingMessage(null);
+  }, [i18n.language]);
 
-  const speak = (text) => {
-    if (!('speechSynthesis' in window) || !text) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = getSpeechLocale(i18n.language);
-    const languagePrefix = utterance.lang.split('-')[0].toLowerCase();
-    const matchingVoice = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith(languagePrefix));
-    if (matchingVoice) utterance.voice = matchingVoice;
-    utterance.rate = 0.92;
-    window.speechSynthesis.speak(utterance);
+  const messageForCurrentLanguage = (message) => {
+    if (message.source === 'price' && message.priceResult) {
+      const result = message.priceResult;
+      return {
+        ...message,
+        title: `${result.crop} · ${t('page.priceTrend')}`,
+        message: `${t('page.currentPrice')}: ${formatPerQuintal(result.currentPrice)} · ${t('page.forecastPeak')}: ${formatPerQuintal(result.predictedPeak)}. ${t(result.recommendation === 'hold' ? 'page.holdReason' : 'page.sellReason')} ${t('page.forecastDisclaimer')}`,
+        action: t('page.whyRecommendation')
+      };
+    }
+    if (message.intent && message.intent !== 'disease') {
+      return localizedResponse(message.intent, context, t);
+    }
+    return message;
+  };
+
+  const speak = async (text, messageIndex) => {
+    if (!text) return;
+    setVoiceError('');
+    setSpeakingMessage(messageIndex);
+    try {
+      await speakText(text, i18n.language, {
+        onStateChange: (state) => setSpeakingMessage(state === 'idle' ? null : messageIndex)
+      });
+    } catch {
+      setSpeakingMessage(null);
+      setVoiceError(t('assistant.playbackUnavailable'));
+    }
   };
 
   const ask = async (question, forcedIntent = '') => {
     const clean = String(question || input).trim();
     if (!clean) return;
+    const kittyCommand = getKittyCommand(clean);
+    if (kittyCommand) {
+      const enabling = kittyCommand === 'on';
+      const alreadyInRequestedState = enabling === kittyEnabled;
+      if (!alreadyInRequestedState) onKittyCommand(kittyCommand);
+      const reply = enabling
+        ? alreadyInRequestedState
+          ? '🐱 Kitty effect is already enabled.'
+          : '🐱 Kitty effect enabled! Move your cursor around and the kitty will follow you.'
+        : alreadyInRequestedState
+          ? '🐱 Kitty effect is already disabled.'
+          : '🐱 Kitty effect disabled.';
+      setMessages((current) => [...current,
+        { role: 'farmer', text: clean },
+        { role: 'assistant', title: 'KisanSetu', message: reply, action: '', key: '', source: 'kitty' }
+      ]);
+      setInput('');
+      return;
+    }
     const resolved = forcedIntent ? { id: forcedIntent === 'price' ? 'recommendation' : forcedIntent, followUp: null } : resolveIntent(clean, lastIntent, context);
-    let nextMessage = response(resolved.id, context, resolved.followUp, clean, t);
+    let nextMessage = { ...response(resolved.id, context, resolved.followUp, clean, t), source: 'intent', followUp: resolved.followUp };
     if (forcedIntent === 'price' || /predict|forecast|future price|price prediction/i.test(clean)) {
       try {
         const result = await api.getAdvisorPrice(context?.filters?.crop || 'Onion', 7);
@@ -394,7 +438,9 @@ export default function KisanAssistant({ context, onAction }) {
           title: `${result.crop} · ${t('page.priceTrend')}`,
           message: `${t('page.currentPrice')}: ${formatPerQuintal(result.currentPrice)} · ${t('page.forecastPeak')}: ${formatPerQuintal(result.predictedPeak)}. ${t(result.recommendation === 'hold' ? 'page.holdReason' : 'page.sellReason')} ${t('page.forecastDisclaimer')}`,
           action: t('page.whyRecommendation'),
-          key: 'recommendation'
+          key: 'recommendation',
+          source: 'price',
+          priceResult: result
         };
       } catch (error) {
         nextMessage = { ...nextMessage, message: `${nextMessage.message} ${t('assistant.disclaimer')}` };
@@ -475,7 +521,11 @@ export default function KisanAssistant({ context, onAction }) {
       </div>
       {listening && <p className="assistant-state"><Mic size={13}/>{t('assistant.listening')}</p>}
       {voiceError && <p className="assistant-error" role="alert">{voiceError}</p>}
-      <div className="assistant-messages" aria-live="polite">{messages.length ? messages.map((message, index) => message.role === 'farmer' ? <p className="assistant-question" key={index}>{message.text}</p> : <article key={index}><strong>{message.title}</strong><p>{message.message}</p><div className="assistant-message-actions"><button type="button" onClick={() => onAction(message.key)}>{message.action}</button><button type="button" className="speak-button" aria-label={t('assistant.read')} onClick={() => speak(`${message.title}. ${message.message}`)}><Volume2 size={14}/></button></div></article>) : <article><strong>{t('assistant.hello')}</strong><p>{t('assistant.intro')}</p></article>}</div>
+      <div className="assistant-messages" aria-live="polite">{messages.length ? messages.map((message, index) => {
+        if (message.role === 'farmer') return <p className="assistant-question" key={index}>{message.text}</p>;
+        const localized = messageForCurrentLanguage(message);
+        return <article key={index}><strong>{localized.title}</strong><p>{localized.message}</p><div className="assistant-message-actions">{localized.action && <button type="button" onClick={() => onAction(localized.key)}>{localized.action}</button>}<button type="button" className={`speak-button ${speakingMessage === index ? 'active' : ''}`} aria-label={t('assistant.read')} aria-busy={speakingMessage === index} onClick={() => speak(localized.message, index)}><Volume2 size={14}/></button></div></article>;
+      }) : <article><strong>{t('assistant.hello')}</strong><p>{t('assistant.intro')}</p></article>}</div>
       <div className="assistant-suggestions">{suggestions.map((suggestion, index) => <button type="button" key={suggestion} onClick={() => index === 3 ? fileInputRef.current?.click() : ask(suggestion, ['recommendation', 'price', 'market'][index])}>{suggestion}</button>)}</div>
       <form onSubmit={(event) => { event.preventDefault(); ask(); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={t('assistant.placeholder')} aria-label={t('assistant.title')}/><button aria-label={t('page.submit')}><Send size={16}/></button></form>
       <p className="assistant-disclaimer">{t('assistant.disclaimer')}</p>

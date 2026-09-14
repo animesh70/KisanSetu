@@ -28,4 +28,12 @@ if (diseaseResult.analysisMode !== 'mock-image-advisor' || diseaseResult.require
   throw new Error('/advisor/disease did not return the required transparent prototype labels');
 }
 console.log('✓ /advisor/disease');
+
+const invalidTtsResponse = await fetch(`${baseUrl}/tts`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ text: 'KisanSetu', language: 'unsupported' })
+});
+if (invalidTtsResponse.status !== 400) throw new Error(`/tts validation: expected 400, received ${invalidTtsResponse.status}`);
+console.log('✓ /tts validation');
 console.log('KisanSetu API smoke test passed.');

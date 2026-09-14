@@ -5,6 +5,7 @@ import StatCard from './components/StatCard';
 import TrendChart from './components/TrendChart';
 import LotModal from './components/LotModal';
 import KisanAssistant from './components/KisanAssistant';
+import PochitaFollower from './components/PochitaFollower';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGE_OPTIONS } from './i18n';
 
@@ -55,6 +56,7 @@ export default function App() {
   const [expandedBuyer, setExpandedBuyer] = useState('');
   const [showBuyerGuide, setShowBuyerGuide] = useState(false);
   const [farmerMode, setFarmerMode] = useState(false);
+  const [kittyEnabled, setKittyEnabled] = useState(false);
 
   const loadDashboard = async () => {
     const quantity = Number(filters.quantity);
@@ -127,7 +129,17 @@ export default function App() {
     } catch { showNotice('alerts.logisticsFailed'); }
   };
   const submitGrievance = async (event) => { event.preventDefault(); if (!grievanceText.trim()) return; try { await api.raiseGrievance(grievanceText); setGrievanceText(''); showNotice('alerts.grievanceRaised'); } catch { showNotice('alerts.grievanceFailed'); } };
-  const resetDemo = async () => { try { await api.resetDemo(); await refreshWorkflow(); setSelectedService(null); notify('alerts.resetDone', 'alerts.resetTitle'); } catch { showNotice('alerts.resetFailed'); } };
+  const resetDemo = async () => {
+    await i18n.changeLanguage('en');
+    try {
+      await api.resetDemo();
+      await refreshWorkflow();
+      setSelectedService(null);
+      notify('alerts.resetDone', 'alerts.resetTitle');
+    } catch {
+      showNotice('alerts.resetFailed');
+    }
+  };
   const toggleAllPrices = async () => {
     if (showAllPrices) { setShowAllPrices(false); return; }
     try { const prices = await api.getPrices(filters.crop, undefined, Number(filters.quantity)); setAllPrices(prices); setShowAllPrices(true); showNotice('alerts.marketsShown', { crop: cropLabel(filters.crop) }); } catch { showNotice('alerts.marketsFailed'); }
@@ -193,6 +205,8 @@ export default function App() {
     {showLotForm && <LotModal crop={filters.crop} onClose={() => setShowLotForm(false)} onSave={createLot}/>} 
     <KisanAssistant
       context={{ filters, data, lots, offers, transactions, logistics, selectedService }}
+      kittyEnabled={kittyEnabled}
+      onKittyCommand={(command) => setKittyEnabled(command === 'on')}
       onAction={(key) => {
         if (key === 'create-lot') {
           setShowLotForm(true);
@@ -213,5 +227,6 @@ export default function App() {
         document.querySelector('.recommendation')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }}
     />
+    {kittyEnabled && <PochitaFollower />}
   </div>;
 }

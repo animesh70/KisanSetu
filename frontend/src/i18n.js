@@ -56,6 +56,25 @@ const cropNames = {
   ta: { onion: 'வெங்காயம்', tomato: 'தக்காளி', soybean: 'சோயாபீன்' }
 };
 
+const playbackUnavailableMessages = {
+  en: 'Speech playback is temporarily unavailable. Please try again.',
+  hi: 'आवाज़ चलाना अभी उपलब्ध नहीं है। कृपया फिर प्रयास करें।',
+  mr: 'आवाज प्लेबॅक सध्या उपलब्ध नाही. कृपया पुन्हा प्रयत्न करा.',
+  ur: 'آواز چلانا عارضی طور پر دستیاب نہیں۔ براہ کرم دوبارہ کوشش کریں۔',
+  tr: 'Ses oynatma geçici olarak kullanılamıyor. Lütfen tekrar deneyin.',
+  es: 'La reproducción de voz no está disponible temporalmente. Inténtalo de nuevo.',
+  pa: 'ਆਵਾਜ਼ ਚਲਾਉਣਾ ਇਸ ਵੇਲੇ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।',
+  or: 'ଶବ୍ଦ ପ୍ଲେବ୍ୟାକ୍ ବର୍ତ୍ତମାନ ଉପଲବ୍ଧ ନାହିଁ। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।',
+  bn: 'ভয়েস প্লেব্যাক সাময়িকভাবে উপলব্ধ নয়। আবার চেষ্টা করুন।',
+  gu: 'વૉઇસ પ્લેબૅક હાલમાં ઉપલબ્ધ નથી. કૃપા કરીને ફરી પ્રયાસ કરો.',
+  te: 'వాయిస్ ప్లేబ్యాక్ ప్రస్తుతం అందుబాటులో లేదు. దయచేసి మళ్లీ ప్రయత్నించండి.',
+  ta: 'குரல் இயக்கம் தற்போது கிடைக்கவில்லை. மீண்டும் முயற்சிக்கவும்.'
+};
+
+for (const [language, message] of Object.entries(playbackUnavailableMessages)) {
+  resources[language].translation.assistant.playbackUnavailable = message;
+}
+
 for (const [language, page] of Object.entries(pageTranslations)) {
   resources[language].translation.page = page;
   resources[language].translation.crops = cropNames[language];
