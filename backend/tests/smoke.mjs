@@ -20,12 +20,15 @@ for (const [path, expectedStatus] of checks) {
 const diseaseResponse = await fetch(`${baseUrl}/advisor/disease?crop=Tomato`, {
   method: 'POST',
   headers: { 'content-type': 'image/png', 'x-file-name': 'smoke-test.png' },
-  body: Buffer.alloc(256, 7)
+  body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
 });
-if (diseaseResponse.status !== 200) throw new Error(`/advisor/disease: expected 200, received ${diseaseResponse.status}`);
 const diseaseResult = await diseaseResponse.json();
-if (diseaseResult.analysisMode !== 'mock-image-advisor' || diseaseResult.requiresExpertConfirmation !== true) {
-  throw new Error('/advisor/disease did not return the required transparent prototype labels');
+if (diseaseResponse.status === 200) {
+  if (!['crop_or_plant', 'not_crop', 'unclear'].includes(diseaseResult.imageType) || diseaseResult.analysisMode !== 'openai-vision') {
+    throw new Error('/advisor/disease did not return a normalized real-vision result');
+  }
+} else if (diseaseResponse.status !== 503 || diseaseResult.error?.code !== 'VISION_NOT_CONFIGURED') {
+  throw new Error(`/advisor/disease: expected a vision result or safe unconfigured response, received ${diseaseResponse.status}`);
 }
 console.log('✓ /advisor/disease');
 

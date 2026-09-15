@@ -5,6 +5,8 @@ import { api } from '../services/api';
 import { getSpeechLocale, LANGUAGE_OPTIONS } from '../i18n';
 import { speakText, stopSpeech } from '../services/tts';
 import { getKittyCommand } from '../services/kittyCommands';
+import { createSpeechRecognitionSession, speechRecognitionErrorKey, startRecognitionAfterStoppingPlayback } from '../services/speechRecognitionSession';
+import { cropImageAssistantMessage } from '../services/cropImageResult';
 
 const hasNumber = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
 const formatPrice = (value) => hasNumber(value) ? `₹${Number(value).toLocaleString('en-IN')}` : null;
@@ -355,20 +357,26 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [lastIntent, setLastIntent] = useState('');
-  const [listening, setListening] = useState(false);
+  const [voiceState, setVoiceState] = useState('idle');
   const [analysing, setAnalysing] = useState(false);
   const [speakingMessage, setSpeakingMessage] = useState(null);
   const [voiceError, setVoiceError] = useState('');
   const recognitionRef = useRef(null);
+  const recognitionSessionRef = useRef(null);
+  const voiceSubmittedRef = useRef(true);
   const fileInputRef = useRef(null);
   const suggestions = useMemo(() => {
     const translated = t('assistant.suggestions', { returnObjects: true });
     return Array.isArray(translated) ? translated : [];
   }, [t, i18n.language]);
   const selectedLanguage = LANGUAGE_OPTIONS.find((language) => language.code === i18n.language) || LANGUAGE_OPTIONS[0];
+  const listening = voiceState !== 'idle';
 
   useEffect(() => () => {
-    recognitionRef.current?.abort?.();
+    voiceSubmittedRef.current = true;
+    recognitionSessionRef.current?.dispose();
+    recognitionSessionRef.current = null;
+    recognitionRef.current = null;
     stopSpeech();
   }, []);
   useEffect(() => {
@@ -452,35 +460,48 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
   };
 
   const toggleListening = () => {
-    if (listening) {
-      recognitionRef.current?.stop?.();
+    const activeSession = recognitionSessionRef.current;
+    if (activeSession) {
+      activeSession.stop();
       return;
     }
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setVoiceError(t('assistant.unsupported'));
       return;
     }
+
     setVoiceError('');
+    setSpeakingMessage(null);
+    voiceSubmittedRef.current = false;
+
     const recognition = new SpeechRecognition();
     recognition.lang = getSpeechLocale(i18n.language);
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.continuous = false;
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
-    recognition.onerror = (event) => {
-      setListening(false);
-      setVoiceError(t('assistant.unsupported'));
-    };
-    recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
-      if (transcript) {
-        setInput(transcript);
-        ask(transcript);
+    recognition.maxAlternatives = 1;
+
+    let session;
+    session = createSpeechRecognitionSession({
+      recognition,
+      submissionRef: voiceSubmittedRef,
+      isCurrent: () => recognitionSessionRef.current === session,
+      initialText: input,
+      onListeningChange: (active) => setVoiceState(active ? 'listening' : 'idle'),
+      onProcessing: () => setVoiceState('processing'),
+      onComposerChange: setInput,
+      onSubmit: (transcript) => void ask(transcript),
+      onError: (error) => setVoiceError(t(speechRecognitionErrorKey(error))),
+      onComplete: () => {
+        if (recognitionSessionRef.current !== session) return;
+        recognitionSessionRef.current = null;
+        recognitionRef.current = null;
       }
-    };
+    });
     recognitionRef.current = recognition;
-    recognition.start();
+    recognitionSessionRef.current = session;
+    startRecognitionAfterStoppingPlayback(stopSpeech, session);
   };
 
   const analyseImage = async (event) => {
@@ -488,11 +509,11 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
     event.target.value = '';
     if (!file) return;
     if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
-      setVoiceError(t('assistant.disclaimer'));
+      setVoiceError(t('assistant.imageInvalid'));
       return;
     }
     if (file.size > 6 * 1024 * 1024) {
-      setVoiceError(t('assistant.disclaimer'));
+      setVoiceError(t('assistant.imageTooLarge'));
       return;
     }
     setAnalysing(true);
@@ -501,10 +522,10 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
       const result = await api.analyzeCropImage(file, context?.filters?.crop);
       setMessages((current) => [...current,
         { role: 'farmer', text: `${t('assistant.photo')}: ${file.name}` },
-        { role: 'assistant', intent: 'disease', title: `${t('assistant.photo')} · ${result.result}`, message: `${result.confidence}% · ${t('assistant.disclaimer')}`, action: t('page.whyRecommendation'), key: 'recommendation' }
+        { role: 'assistant', ...cropImageAssistantMessage(result, t) }
       ]);
     } catch (error) {
-      setVoiceError(t('assistant.disclaimer'));
+      setVoiceError(t('assistant.imageAnalysisUnavailable'));
     } finally {
       setAnalysing(false);
     }
@@ -527,7 +548,7 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
         return <article key={index}><strong>{localized.title}</strong><p>{localized.message}</p><div className="assistant-message-actions">{localized.action && <button type="button" onClick={() => onAction(localized.key)}>{localized.action}</button>}<button type="button" className={`speak-button ${speakingMessage === index ? 'active' : ''}`} aria-label={t('assistant.read')} aria-busy={speakingMessage === index} onClick={() => speak(localized.message, index)}><Volume2 size={14}/></button></div></article>;
       }) : <article><strong>{t('assistant.hello')}</strong><p>{t('assistant.intro')}</p></article>}</div>
       <div className="assistant-suggestions">{suggestions.map((suggestion, index) => <button type="button" key={suggestion} onClick={() => index === 3 ? fileInputRef.current?.click() : ask(suggestion, ['recommendation', 'price', 'market'][index])}>{suggestion}</button>)}</div>
-      <form onSubmit={(event) => { event.preventDefault(); ask(); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={t('assistant.placeholder')} aria-label={t('assistant.title')}/><button aria-label={t('page.submit')}><Send size={16}/></button></form>
+      <form onSubmit={(event) => { event.preventDefault(); ask(input); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={t('assistant.placeholder')} aria-label={t('assistant.title')}/><button aria-label={t('page.submit')}><Send size={16}/></button></form>
       <p className="assistant-disclaimer">{t('assistant.disclaimer')}</p>
     </section>}
     <button type="button" className="assistant-fab" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X size={21}/> : <MessageCircle size={22}/>}<span>{open ? t('assistant.close') : t('assistant.open')}</span></button>
