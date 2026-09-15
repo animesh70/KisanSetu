@@ -88,7 +88,7 @@ const voiceInputMessages = {
 
 const cropImageMessages = {
   en: {
-    imageNotCropTitle: 'Not a crop image', imageNotCrop: "This doesn't appear to be a crop photo. Upload a clear photo of the affected crop, leaf, fruit, or stem.", imageUnclear: "I couldn't clearly identify a crop in this image. Try another photo in good lighting with the affected leaf or crop visible.", imagePlant: 'Plant detected', imageHealthy: 'No obvious visual disease symptoms were identified. Continue monitoring the crop if symptoms develop.', imageConditionUnclear: 'Condition unclear', imageHealthUnclear: 'A plant is visible, but its condition cannot be identified reliably. Try a clearer close-up or consult an agriculture expert.', imagePossibleCondition: 'Possible condition: {{condition}}', imageVisibleSigns: 'Visible signs', imageNextStep: 'Recommended next step', imageDisclaimer: 'Image screening is informational only. Confirm crop disease and treatment with a qualified agriculture expert.', imageInvalid: 'Upload a JPG, PNG, or WebP crop image.', imageTooLarge: 'The crop photo must be 6 MB or smaller.', imageAnalysisUnavailable: 'Crop-photo analysis is temporarily unavailable. Please try again later.'
+    imageNotCropTitle: 'Not a crop image', imageNotCrop: "This image does not appear to show a crop or plant. Upload a clear photo of the affected crop, leaf, fruit, or stem.", imageUnclear: "I couldn't clearly identify a crop in this image. Try another photo in good lighting with the affected leaf or crop visible.", imagePlant: 'Plant detected', imageHealthy: 'No obvious visual disease symptoms were identified. Continue monitoring the crop if symptoms develop.', imageConditionUnclear: 'Condition unclear', imageHealthUnclear: 'A plant is visible, but its condition cannot be identified reliably. Try a clearer close-up or consult an agriculture expert.', imagePossibleCondition: 'Possible condition: {{condition}}', imageVisibleSigns: 'Visible signs', imageNextStep: 'Recommended next step', imageDisclaimer: 'Image screening is informational only. Confirm crop disease and treatment with a qualified agriculture expert.', imageInvalid: 'Upload a JPG, PNG, or WebP crop image.', imageTooLarge: 'The crop photo must be 6 MB or smaller.', imageAnalysisUnavailable: 'Crop-photo analysis is temporarily unavailable. Please try again later.'
   },
   hi: {
     imageNotCropTitle: 'यह फसल की तस्वीर नहीं है', imageNotCrop: 'यह फसल की तस्वीर नहीं लगती। प्रभावित फसल, पत्ती, फल या तने की साफ तस्वीर अपलोड करें।', imageUnclear: 'मैं इस तस्वीर में फसल को स्पष्ट रूप से पहचान नहीं सका। अच्छी रोशनी में प्रभावित पत्ती या फसल की दूसरी तस्वीर लें।', imagePlant: 'पौधा पहचाना गया', imageHealthy: 'कोई स्पष्ट दृश्य रोग लक्षण नहीं मिले। लक्षण दिखाई दें तो फसल की निगरानी जारी रखें।', imageConditionUnclear: 'स्थिति स्पष्ट नहीं', imageHealthUnclear: 'पौधा दिखाई दे रहा है, लेकिन उसकी स्थिति विश्वसनीय रूप से पहचानी नहीं जा सकी। पास से साफ तस्वीर लें या कृषि विशेषज्ञ से सलाह लें।', imagePossibleCondition: 'संभावित स्थिति: {{condition}}', imageVisibleSigns: 'दिखाई देने वाले संकेत', imageNextStep: 'अगला सुझाया कदम', imageDisclaimer: 'तस्वीर की जाँच केवल जानकारी के लिए है। रोग और उपचार की पुष्टि योग्य कृषि विशेषज्ञ से करें।', imageInvalid: 'JPG, PNG या WebP फसल तस्वीर अपलोड करें।', imageTooLarge: 'फसल की तस्वीर 6 MB या उससे छोटी होनी चाहिए।', imageAnalysisUnavailable: 'फसल तस्वीर विश्लेषण अभी उपलब्ध नहीं है। कृपया बाद में फिर प्रयास करें।'
@@ -140,6 +140,21 @@ const cropVisionStateMessages = {
   ta: { imageProduce: 'அறுவடை செய்யப்பட்ட விளைபொருள்', imageHarvested: 'அறுவடை செய்யப்பட்ட விளைபொருள் தெரிகிறது. இந்தப் படத்திற்கு உயிருள்ள செடியின் நோய் ஆய்வு பொருந்தாது.', imageUnsupported: 'இந்தப் பயிர் தெரிகிறது, ஆனால் இதற்கான நோய் ஆய்வு இன்னும் ஆதரிக்கப்படவில்லை. எந்த நோயும் கண்டறியப்படவில்லை; அறிகுறிகள் இருந்தால் வேளாண் நிபுணரை அணுகவும்.' }
 };
 
+const harvestedOnionMessages = {
+  en: 'This appears to show harvested onions. Upload a clear photo of affected leaves, stems, or bulbs for disease screening.',
+  hi: 'यह कटी हुई प्याज की उपज लगती है। रोग जाँच के लिए प्रभावित पत्तियों, तनों या प्याज के कंदों की साफ तस्वीर अपलोड करें।',
+  mr: 'हे काढलेले कांदे दिसत आहेत. रोग तपासणीसाठी बाधित पाने, देठ किंवा कांद्याच्या कंदांचे स्पष्ट छायाचित्र अपलोड करा.',
+  ur: 'یہ کٹائی شدہ پیاز معلوم ہوتی ہے۔ بیماری کی جانچ کے لیے متاثرہ پتوں، تنوں یا پیاز کے بلبوں کی واضح تصویر اپ لوڈ کریں۔',
+  tr: 'Bu görüntü hasat edilmiş soğanları gösteriyor gibi görünüyor. Hastalık taraması için etkilenen yaprakların, gövdelerin veya soğanların net fotoğrafını yükleyin.',
+  es: 'Esta imagen parece mostrar cebollas cosechadas. Para analizar enfermedades, sube una foto clara de las hojas, los tallos o los bulbos afectados.',
+  pa: 'ਇਸ ਤਸਵੀਰ ਵਿੱਚ ਕੱਟੇ ਹੋਏ ਪਿਆਜ਼ ਦਿਖਦੇ ਹਨ। ਬਿਮਾਰੀ ਦੀ ਜਾਂਚ ਲਈ ਪ੍ਰਭਾਵਿਤ ਪੱਤਿਆਂ, ਤਣਿਆਂ ਜਾਂ ਪਿਆਜ਼ ਦੇ ਗੰਢਾਂ ਦੀ ਸਾਫ਼ ਫੋਟੋ ਅੱਪਲੋਡ ਕਰੋ।',
+  or: 'ଏହି ଛବିରେ ଅମଳ ହୋଇଥିବା ପିଆଜ ଦେଖାଯାଉଛି। ରୋଗ ଯାଞ୍ଚ ପାଇଁ ପ୍ରଭାବିତ ପତ୍ର, ଡାଳ କିମ୍ବା ପିଆଜ କନ୍ଦର ସ୍ପଷ୍ଟ ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ।',
+  bn: 'এই ছবিতে সংগৃহীত পেঁয়াজ দেখা যাচ্ছে। রোগ পরীক্ষার জন্য আক্রান্ত পাতা, কাণ্ড বা পেঁয়াজের কন্দের পরিষ্কার ছবি আপলোড করুন।',
+  gu: 'આ તસવીરમાં લણેલી ડુંગળી દેખાય છે. રોગ તપાસ માટે અસરગ્રસ્ત પાન, ડાંઠ અથવા ડુંગળીના કંદનો સ્પષ્ટ ફોટો અપલોડ કરો.',
+  te: 'ఈ చిత్రంలో కోత తీసిన ఉల్లిపాయలు కనిపిస్తున్నాయి. వ్యాధి పరీక్ష కోసం ప్రభావిత ఆకులు, కాండాలు లేదా ఉల్లిపాయ గడ్డల స్పష్టమైన చిత్రాన్ని అప్‌లోడ్ చేయండి.',
+  ta: 'இந்தப் படத்தில் அறுவடை செய்யப்பட்ட வெங்காயங்கள் தெரிகின்றன. நோய் ஆய்வுக்காகப் பாதிக்கப்பட்ட இலைகள், தண்டுகள் அல்லது வெங்காயக் கிழங்குகளின் தெளிவான படத்தைப் பதிவேற்றவும்.'
+};
+
 for (const [language, message] of Object.entries(playbackUnavailableMessages)) {
   resources[language].translation.assistant.playbackUnavailable = message;
 }
@@ -150,6 +165,7 @@ for (const [language, page] of Object.entries(pageTranslations)) {
   Object.assign(resources[language].translation.assistant, voiceInputMessages[language]);
   Object.assign(resources[language].translation.assistant, cropImageMessages[language]);
   Object.assign(resources[language].translation.assistant, cropVisionStateMessages[language]);
+  resources[language].translation.assistant.imageHarvestedOnion = harvestedOnionMessages[language];
   resources[language].translation.assistant.disclaimer = page.forecastDisclaimer;
   resources[language].translation.alerts = language === 'en' ? {
     updateTitle: 'KisanSetu update', buyerReadyTitle: 'Buyer offer ready', buyerReadyDetail: 'Review your verified buyer offer and choose to accept, decline, or counter.',

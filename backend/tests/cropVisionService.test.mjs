@@ -23,7 +23,7 @@ const analyze = (result, hint = 'Onion', capture) => analyzeCropImage({
   fetchImpl: mockFetch(result, capture)
 });
 
-test('non-crop image has no disease, crop, confidence or provider details', async () => {
+test('anime/poster classified non-crop has no disease, crop, confidence or provider details', async () => {
   const result = await analyze(prediction({
     imageType: 'non_crop', crop: null, assessment: 'not_applicable',
     condition: null, messageCode: 'NON_CROP'
@@ -32,6 +32,7 @@ test('non-crop image has no disease, crop, confidence or provider details', asyn
   assert.equal(result.crop, null);
   assert.equal(result.result, null);
   assert.equal(result.confidence, null);
+  assert.equal(result.messageCode, 'NON_CROP');
   assert.doesNotMatch(JSON.stringify(result), /Early blight|private-test-key|internal-model-name/);
 });
 

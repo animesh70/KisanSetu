@@ -5,12 +5,13 @@ import { cropImageAssistantMessage } from '../src/services/cropImageResult.js';
 const strings = {
   'assistant.photo': 'Crop photo',
   'assistant.imageNotCropTitle': 'Not a crop image',
-  'assistant.imageNotCrop': "This doesn't appear to be a crop photo.",
+  'assistant.imageNotCrop': 'This image does not appear to show a crop or plant.',
   'assistant.imageConditionUnclear': 'Condition unclear',
   'assistant.imageUnclear': "I couldn't clearly identify a crop.",
   'assistant.imagePlant': 'Plant detected',
   'assistant.imageProduce': 'Harvested produce',
   'assistant.imageHarvested': 'Harvested produce is visible. Living-plant disease screening is not applicable.',
+  'assistant.imageHarvestedOnion': 'This appears to show harvested onions. Upload a clear photo of affected leaves, stems, or bulbs for disease screening.',
   'assistant.imageUnsupported': 'Disease screening is not supported for this crop. No condition identified.',
   'assistant.imageHealthy': 'No obvious visual disease symptoms were identified.',
   'assistant.imageHealthUnclear': 'A plant is visible, but its condition cannot be identified reliably.',
@@ -27,7 +28,7 @@ test('non-crop UI contains no disease, percentage, price wording, or recommendat
   }, t);
 
   assert.equal(message.title, 'Not a crop image');
-  assert.equal(message.message, "This doesn't appear to be a crop photo.");
+  assert.equal(message.message, 'This image does not appear to show a crop or plant.');
   assert.equal(message.action, '');
   assert.doesNotMatch(`${message.title} ${message.message}`, /Purple blotch|%|price|recommendation/i);
 });
@@ -67,7 +68,8 @@ test('unclear image UI asks for another photo and does not guess', () => {
 test('harvested produce gets informational response without plant or disease claims', () => {
   const message = cropImageAssistantMessage({ imageType: 'harvested_produce', isCropImage: true, crop: 'Onion', result: null, confidence: null }, t);
   assert.equal(message.title, 'Crop photo · Onion');
-  assert.match(message.message, /Harvested produce is visible/);
+  assert.match(message.message, /harvested onions/);
+  assert.match(message.message, /affected leaves, stems, or bulbs/);
   assert.doesNotMatch(message.message, /Plant detected|Purple blotch|%|price/i);
   assert.equal(message.action, '');
 });
@@ -77,4 +79,11 @@ test('unsupported onion screening never displays a condition or percentage', () 
   assert.match(message.message, /not supported/);
   assert.doesNotMatch(message.message, /Early blight|Purple blotch|%/);
   assert.equal(message.action, '');
+});
+
+test('other harvested produce keeps the generic localized message', () => {
+  const message = cropImageAssistantMessage({ imageType: 'harvested_produce', crop: 'Tomato' }, t);
+  assert.equal(message.title, 'Crop photo · Tomato');
+  assert.match(message.message, /Harvested produce is visible/);
+  assert.doesNotMatch(message.message, /onions/);
 });

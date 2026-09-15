@@ -37,7 +37,7 @@ export function cropImageAssistantMessage(result, t) {
     return {
       intent: 'disease',
       title: `${t('assistant.photo')} · ${result.crop || t('assistant.imageProduce')}`,
-      message: t('assistant.imageHarvested'),
+      message: result.crop === 'Onion' ? t('assistant.imageHarvestedOnion') : t('assistant.imageHarvested'),
       action: '', key: '', source: 'disease'
     };
   }
