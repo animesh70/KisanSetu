@@ -37,7 +37,7 @@ Farmer/FPO → Market prices and forecast → Crop lot → Buyer matches → Off
 - Transaction steps: pickup → transit → delivery → payment confirmation
 - Payment amount, demo payment method, status, and reference ID
 - Mobile navigation drawer, responsive forms, notification centre, and floating action feedback
-- **AI Crop & Price Advisor** with browser microphone input, Azure-generated multilingual read-aloud audio, a seven-day advisor endpoint, and validated crop-image uploads. Image results are deliberately labelled as mock screening, not a real agronomic diagnosis.
+- **AI Crop & Price Advisor** with browser microphone input, Azure-generated multilingual read-aloud audio, a seven-day advisor endpoint, and validated crop-image uploads. Crop-photo screening uses the configured standalone ML service; its results are informational and require expert confirmation, not a definitive agronomic diagnosis.
 - **12-language i18next interface**: English, Hindi, Marathi, Urdu, Turkish, Spanish, Punjabi, Odia, Bengali, Gujarati, Telugu, and Tamil. Urdu also switches the page to an RTL-aware layout.
 - **Offline-first PWA shell** with an install manifest, service worker, offline page, connection indicator, and cached read-only market/API responses. Transaction-changing actions remain network-only.
 - **Chat-controlled Oneko kitty** that can be enabled or disabled with deterministic local commands without sending those commands to the backend.
@@ -58,7 +58,7 @@ This prototype intentionally labels its demo data in the interface:
 | Health | `GET /api/health` | Confirm the API is available. |
 | Markets | `GET /api/markets/prices?crop=Onion&quantity=100`, `/trends`, `/forecast` | Demo prices, capacity-aware transport/net estimates, trend, and forecast. |
 | Price advisor | `GET /api/advisor/price?crop=Onion&days=7` | Normalized prototype price outlook and sell/hold signal. |
-| Crop image advisor | `POST /api/advisor/disease?crop=Tomato` | Accept a JPG, PNG, or WebP body (maximum 6 MB) and return a clearly labelled mock screening result. |
+| Crop image advisor | `POST /api/advisor/disease?crop=Tomato` | Accept a JPG, PNG, or WebP body (maximum 6 MB); the backend sends it to the configured standalone CropVision ML service and returns a safe screening result. |
 | Azure speech | `POST /api/tts` | Convert exact localized assistant text into MP3 using the whitelisted Azure voice for the selected language. |
 | Crop lots | `GET/POST /api/lots` | View or publish a farmer crop lot. |
 | Recommendations | `GET /api/recommendations/sell` | Storage-aware sell/hold recommendation and net-price options. |
@@ -83,6 +83,8 @@ npm install
 Copy-Item .env.example .env
 npm run dev
 ```
+
+For crop-photo screening, configure `CROP_VISION_URL` (the deployed service base URL) and `CROP_VISION_API_KEY` in the backend's private `.env`. Only the backend uploads image bytes to `/predict`; the browser never contacts that service or receives its key. `CROP_VISION_TIMEOUT_MS` defaults to 60000 (60 seconds) to accommodate cold starts. Without configuration, `/api/advisor/disease` returns a safe 503; upstream failures never produce a guessed diagnosis.
 
 For multilingual read-aloud, add a Microsoft Azure Speech resource and configure these **backend-only** values in `backend/.env` and in the deployed backend service environment:
 

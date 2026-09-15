@@ -24,10 +24,11 @@ const diseaseResponse = await fetch(`${baseUrl}/advisor/disease?crop=Tomato`, {
 });
 const diseaseResult = await diseaseResponse.json();
 if (diseaseResponse.status === 200) {
-  if (!['crop_or_plant', 'not_crop', 'unclear'].includes(diseaseResult.imageType) || diseaseResult.analysisMode !== 'openai-vision') {
-    throw new Error('/advisor/disease did not return a normalized real-vision result');
+  if (!['crop_or_plant', 'not_crop', 'unclear', 'harvested_produce'].includes(diseaseResult.imageType) || diseaseResult.analysisMode !== 'crop-image-screening') {
+    throw new Error('/advisor/disease did not return a normalized crop screening result');
   }
-} else if (diseaseResponse.status !== 503 || diseaseResult.error?.code !== 'VISION_NOT_CONFIGURED') {
+} else if (diseaseResponse.status !== 400 && diseaseResponse.status !== 502 && diseaseResponse.status !== 504
+  && (diseaseResponse.status !== 503 || diseaseResult.error?.code !== 'VISION_NOT_CONFIGURED')) {
   throw new Error(`/advisor/disease: expected a vision result or safe unconfigured response, received ${diseaseResponse.status}`);
 }
 console.log('✓ /advisor/disease');

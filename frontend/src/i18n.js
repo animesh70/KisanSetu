@@ -125,6 +125,21 @@ const cropImageMessages = {
   }
 };
 
+const cropVisionStateMessages = {
+  en: { imageProduce: 'Harvested produce', imageHarvested: 'Harvested produce is visible. A disease screening for living plants is not applicable to this photo.', imageUnsupported: 'This crop is visible, but disease screening is not yet supported for it. No condition was identified; consult an agriculture expert if you notice symptoms.' },
+  hi: { imageProduce: 'कटी हुई उपज', imageHarvested: 'कटी हुई उपज दिख रही है। इस तस्वीर पर जीवित पौधे की रोग जाँच लागू नहीं होती।', imageUnsupported: 'यह फसल दिख रही है, लेकिन इसके लिए रोग जाँच अभी उपलब्ध नहीं है। कोई रोग तय नहीं किया गया; लक्षण दिखें तो कृषि विशेषज्ञ से सलाह लें।' },
+  mr: { imageProduce: 'काढलेले उत्पादन', imageHarvested: 'काढलेले उत्पादन दिसत आहे. या छायाचित्रावर जिवंत पिकाची रोग तपासणी लागू होत नाही.', imageUnsupported: 'हे पीक दिसत आहे, पण त्यासाठी रोग तपासणी अद्याप उपलब्ध नाही. कोणताही रोग निश्चित केलेला नाही; लक्षणे दिसल्यास कृषितज्ज्ञांचा सल्ला घ्या.' },
+  ur: { imageProduce: 'کٹائی شدہ پیداوار', imageHarvested: 'کٹائی شدہ پیداوار نظر آ رہی ہے۔ اس تصویر پر زندہ پودے کی بیماری کی جانچ لاگو نہیں ہوتی۔', imageUnsupported: 'یہ فصل نظر آ رہی ہے، لیکن اس کے لیے بیماری کی جانچ ابھی دستیاب نہیں۔ کوئی بیماری شناخت نہیں کی گئی؛ علامات ہوں تو زرعی ماہر سے رجوع کریں۔' },
+  tr: { imageProduce: 'Hasat edilmiş ürün', imageHarvested: 'Hasat edilmiş ürün görünüyor. Canlı bitki hastalığı taraması bu fotoğraf için uygun değildir.', imageUnsupported: 'Bu ürün görünüyor ancak hastalık taraması henüz desteklenmiyor. Bir hastalık belirlenmedi; belirtiler varsa bir tarım uzmanına danışın.' },
+  es: { imageProduce: 'Producto cosechado', imageHarvested: 'Se ve producto cosechado. El análisis de enfermedades de plantas vivas no corresponde a esta foto.', imageUnsupported: 'Este cultivo es visible, pero aún no se admite su análisis de enfermedades. No se identificó ninguna afección; consulta a un especialista agrícola si observas síntomas.' },
+  pa: { imageProduce: 'ਕੱਟੀ ਹੋਈ ਉਪਜ', imageHarvested: 'ਕੱਟੀ ਹੋਈ ਉਪਜ ਦਿਖ ਰਹੀ ਹੈ। ਇਸ ਫੋਟੋ ਲਈ ਜੀਵਤ ਪੌਦੇ ਦੀ ਬਿਮਾਰੀ ਜਾਂਚ ਲਾਗੂ ਨਹੀਂ ਹੁੰਦੀ।', imageUnsupported: 'ਇਹ ਫਸਲ ਦਿਖ ਰਹੀ ਹੈ, ਪਰ ਇਸ ਲਈ ਬਿਮਾਰੀ ਜਾਂਚ ਹਾਲੇ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਕੋਈ ਬਿਮਾਰੀ ਨਿਰਧਾਰਤ ਨਹੀਂ ਹੋਈ; ਲੱਛਣ ਹੋਣ ਤੇ ਖੇਤੀ ਮਾਹਰ ਨਾਲ ਸਲਾਹ ਕਰੋ।' },
+  or: { imageProduce: 'ଅମଳ ହୋଇଥିବା ଫସଲ', imageHarvested: 'ଅମଳ ହୋଇଥିବା ଫସଲ ଦେଖାଯାଉଛି। ଏହି ଫଟୋରେ ଜୀବନ୍ତ ଗଛର ରୋଗ ଯାଞ୍ଚ ପ୍ରଯୁଜ୍ୟ ନୁହେଁ।', imageUnsupported: 'ଏହି ଫସଲ ଦେଖାଯାଉଛି, କିନ୍ତୁ ଏହାର ରୋଗ ଯାଞ୍ଚ ଏପର୍ଯ୍ୟନ୍ତ ଉପଲବ୍ଧ ନୁହେଁ। କୌଣସି ରୋଗ ଚିହ୍ନଟ ହୋଇନାହିଁ; ଲକ୍ଷଣ ଥିଲେ କୃଷି ବିଶେଷଜ୍ଞଙ୍କୁ ପଚାରନ୍ତୁ।' },
+  bn: { imageProduce: 'সংগৃহীত ফসল', imageHarvested: 'সংগৃহীত ফসল দেখা যাচ্ছে। এই ছবিতে জীবন্ত গাছের রোগ পরীক্ষা প্রযোজ্য নয়।', imageUnsupported: 'এই ফসল দেখা যাচ্ছে, কিন্তু এর রোগ পরীক্ষা এখনও সমর্থিত নয়। কোনো রোগ শনাক্ত করা হয়নি; লক্ষণ থাকলে কৃষি বিশেষজ্ঞের পরামর্শ নিন।' },
+  gu: { imageProduce: 'લણેલી ઉપજ', imageHarvested: 'લણેલી ઉપજ દેખાય છે. આ ફોટા માટે જીવંત છોડના રોગની તપાસ લાગુ પડતી નથી.', imageUnsupported: 'આ પાક દેખાય છે, પણ તેની રોગ તપાસ હજુ ઉપલબ્ધ નથી. કોઈ રોગ ઓળખાયો નથી; લક્ષણો હોય તો કૃષિ નિષ્ણાતને પૂછો.' },
+  te: { imageProduce: 'కోత తీసిన పంట', imageHarvested: 'కోత తీసిన పంట కనిపిస్తోంది. ఈ చిత్రానికి జీవించి ఉన్న మొక్క వ్యాధి పరీక్ష వర్తించదు.', imageUnsupported: 'ఈ పంట కనిపిస్తోంది, కానీ దానికి వ్యాధి పరీక్ష ఇంకా అందుబాటులో లేదు. ఏ వ్యాధినీ గుర్తించలేదు; లక్షణాలు ఉంటే వ్యవసాయ నిపుణుడిని సంప్రదించండి.' },
+  ta: { imageProduce: 'அறுவடை செய்யப்பட்ட விளைபொருள்', imageHarvested: 'அறுவடை செய்யப்பட்ட விளைபொருள் தெரிகிறது. இந்தப் படத்திற்கு உயிருள்ள செடியின் நோய் ஆய்வு பொருந்தாது.', imageUnsupported: 'இந்தப் பயிர் தெரிகிறது, ஆனால் இதற்கான நோய் ஆய்வு இன்னும் ஆதரிக்கப்படவில்லை. எந்த நோயும் கண்டறியப்படவில்லை; அறிகுறிகள் இருந்தால் வேளாண் நிபுணரை அணுகவும்.' }
+};
+
 for (const [language, message] of Object.entries(playbackUnavailableMessages)) {
   resources[language].translation.assistant.playbackUnavailable = message;
 }
@@ -134,6 +149,7 @@ for (const [language, page] of Object.entries(pageTranslations)) {
   resources[language].translation.crops = cropNames[language];
   Object.assign(resources[language].translation.assistant, voiceInputMessages[language]);
   Object.assign(resources[language].translation.assistant, cropImageMessages[language]);
+  Object.assign(resources[language].translation.assistant, cropVisionStateMessages[language]);
   resources[language].translation.assistant.disclaimer = page.forecastDisclaimer;
   resources[language].translation.alerts = language === 'en' ? {
     updateTitle: 'KisanSetu update', buyerReadyTitle: 'Buyer offer ready', buyerReadyDetail: 'Review your verified buyer offer and choose to accept, decline, or counter.',

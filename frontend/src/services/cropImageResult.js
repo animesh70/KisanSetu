@@ -33,6 +33,24 @@ export function cropImageAssistantMessage(result, t) {
     };
   }
 
+  if (result?.imageType === 'harvested_produce') {
+    return {
+      intent: 'disease',
+      title: `${t('assistant.photo')} · ${result.crop || t('assistant.imageProduce')}`,
+      message: t('assistant.imageHarvested'),
+      action: '', key: '', source: 'disease'
+    };
+  }
+
+  if (result?.messageCode === 'UNSUPPORTED_CROP') {
+    return {
+      intent: 'disease',
+      title: `${t('assistant.photo')} · ${result.crop || t('assistant.imagePlant')}`,
+      message: t('assistant.imageUnsupported'),
+      action: '', key: '', source: 'disease'
+    };
+  }
+
   const crop = result?.crop || t('assistant.imagePlant');
   const details = detailLines(result, t);
   let summary;

@@ -9,6 +9,9 @@ const strings = {
   'assistant.imageConditionUnclear': 'Condition unclear',
   'assistant.imageUnclear': "I couldn't clearly identify a crop.",
   'assistant.imagePlant': 'Plant detected',
+  'assistant.imageProduce': 'Harvested produce',
+  'assistant.imageHarvested': 'Harvested produce is visible. Living-plant disease screening is not applicable.',
+  'assistant.imageUnsupported': 'Disease screening is not supported for this crop. No condition identified.',
   'assistant.imageHealthy': 'No obvious visual disease symptoms were identified.',
   'assistant.imageHealthUnclear': 'A plant is visible, but its condition cannot be identified reliably.',
   'assistant.imagePossibleCondition': 'Possible condition: {{condition}}',
@@ -59,4 +62,19 @@ test('unclear image UI asks for another photo and does not guess', () => {
   assert.equal(message.title, 'Crop photo · Condition unclear');
   assert.equal(message.message, "I couldn't clearly identify a crop.");
   assert.doesNotMatch(message.message, /Purple blotch|%/);
+});
+
+test('harvested produce gets informational response without plant or disease claims', () => {
+  const message = cropImageAssistantMessage({ imageType: 'harvested_produce', isCropImage: true, crop: 'Onion', result: null, confidence: null }, t);
+  assert.equal(message.title, 'Crop photo · Onion');
+  assert.match(message.message, /Harvested produce is visible/);
+  assert.doesNotMatch(message.message, /Plant detected|Purple blotch|%|price/i);
+  assert.equal(message.action, '');
+});
+
+test('unsupported onion screening never displays a condition or percentage', () => {
+  const message = cropImageAssistantMessage({ imageType: 'crop_or_plant', isCropImage: true, crop: 'Onion', healthStatus: 'unclear', messageCode: 'UNSUPPORTED_CROP' }, t);
+  assert.match(message.message, /not supported/);
+  assert.doesNotMatch(message.message, /Early blight|Purple blotch|%/);
+  assert.equal(message.action, '');
 });

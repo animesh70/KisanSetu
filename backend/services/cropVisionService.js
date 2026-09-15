@@ -1,36 +1,5 @@
-const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
-const DEFAULT_VISION_MODEL = 'gpt-5.6-luna';
-const DEFAULT_TIMEOUT_MS = 20_000;
-
-const IMAGE_ANALYSIS_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    imageType: { type: 'string', enum: ['crop_or_plant', 'not_crop', 'unclear'] },
-    crop: { type: ['string', 'null'] },
-    cropConfidence: { type: 'null' },
-    healthStatus: { type: ['string', 'null'], enum: ['healthy', 'possibly_diseased', 'unclear', null] },
-    possibleCondition: { type: ['string', 'null'] },
-    conditionConfidence: { type: 'null' },
-    observations: { type: 'array', items: { type: 'string' }, maxItems: 6 },
-    nextStep: { type: 'string' },
-    requiresExpertConfirmation: { type: 'boolean' }
-  },
-  required: [
-    'imageType',
-    'crop',
-    'cropConfidence',
-    'healthStatus',
-    'possibleCondition',
-    'conditionConfidence',
-    'observations',
-    'nextStep',
-    'requiresExpertConfirmation'
-  ]
-};
-
-const NON_CROP_MESSAGE = 'This image does not appear to contain a crop or plant. Please upload a clear photo of the affected crop or leaf.';
-const UNCLEAR_MESSAGE = 'I could not clearly identify a crop in this image. Try another photo in good lighting with the affected leaf or crop visible.';
+const DEFAULT_TIMEOUT_MS = 60_000;
+const INVALID_RESPONSE = 'Crop-image analysis returned an invalid response.';
 
 export class CropVisionError extends Error {
   constructor(code, status, message) {
@@ -41,199 +10,114 @@ export class CropVisionError extends Error {
   }
 }
 
+function invalidResponse() {
+  throw new CropVisionError('VISION_INVALID_RESPONSE', 502, INVALID_RESPONSE);
+}
+
 function cleanNullableText(value, maxLength = 160) {
   if (typeof value !== 'string') return null;
-  const clean = value.trim().replace(/\s+/g, ' ').slice(0, maxLength);
-  return clean || null;
+  return value.trim().replace(/\s+/g, ' ').slice(0, maxLength) || null;
 }
 
-function cleanObservations(value) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => cleanNullableText(item, 220))
-    .filter(Boolean)
-    .slice(0, 6);
-}
-
+// Validate the ML service contract before publishing a provider-neutral result.
 export function normalizeCropVisionAnalysis(candidate) {
-  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
-    throw new CropVisionError('VISION_INVALID_RESPONSE', 502, 'Crop-image analysis returned an invalid response.');
-  }
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate) || candidate.confidence !== null) invalidResponse();
+  if (!['imageType', 'crop', 'assessment', 'condition', 'confidence', 'messageCode'].every((field) => Object.hasOwn(candidate, field))) invalidResponse();
+  const { imageType, assessment, messageCode } = candidate;
+  const crop = candidate.crop === null ? null : cleanNullableText(candidate.crop, 80);
+  const condition = candidate.condition === null ? null : cleanNullableText(candidate.condition, 160);
+  if ((candidate.crop !== null && !crop) || (candidate.condition !== null && !condition)) invalidResponse();
 
-  const imageType = candidate.imageType;
-  if (!['crop_or_plant', 'not_crop', 'unclear'].includes(imageType)) {
-    throw new CropVisionError('VISION_INVALID_RESPONSE', 502, 'Crop-image analysis returned an invalid response.');
-  }
-
-  const observations = cleanObservations(candidate.observations);
-  if (imageType === 'not_crop') {
-    return {
-      imageType,
-      isCropImage: false,
-      crop: null,
-      cropConfidence: null,
-      healthStatus: null,
-      possibleCondition: null,
-      conditionConfidence: null,
-      result: null,
-      confidence: null,
-      observations,
-      nextStep: cleanNullableText(candidate.nextStep, 500) || NON_CROP_MESSAGE,
-      message: NON_CROP_MESSAGE,
-      requiresExpertConfirmation: true,
-      analysisMode: 'openai-vision'
-    };
-  }
-
-  if (imageType === 'unclear') {
-    return {
-      imageType,
-      isCropImage: null,
-      crop: null,
-      cropConfidence: null,
-      healthStatus: null,
-      possibleCondition: null,
-      conditionConfidence: null,
-      result: null,
-      confidence: null,
-      observations,
-      nextStep: cleanNullableText(candidate.nextStep, 500) || UNCLEAR_MESSAGE,
-      message: UNCLEAR_MESSAGE,
-      requiresExpertConfirmation: true,
-      analysisMode: 'openai-vision'
-    };
-  }
-
-  const healthStatus = candidate.healthStatus;
-  if (!['healthy', 'possibly_diseased', 'unclear'].includes(healthStatus)) {
-    throw new CropVisionError('VISION_INVALID_RESPONSE', 502, 'Crop-image analysis returned an invalid response.');
-  }
-
-  const crop = cleanNullableText(candidate.crop, 80);
-  const possibleCondition = healthStatus === 'possibly_diseased'
-    ? cleanNullableText(candidate.possibleCondition, 160)
-    : null;
-  const normalizedHealthStatus = healthStatus === 'possibly_diseased' && !possibleCondition ? 'unclear' : healthStatus;
-  const nextStep = cleanNullableText(candidate.nextStep, 500) || 'Take a clear close-up in daylight and consult a qualified agriculture expert if symptoms persist.';
+  let publicType;
+  let healthStatus = null;
+  if (imageType === 'non_crop' && assessment === 'not_applicable' && messageCode === 'NON_CROP' && !crop && !condition) {
+    publicType = 'not_crop';
+  } else if (imageType === 'crop_related_unclear' && assessment === 'condition_unclear' && messageCode === 'UNCLEAR' && !condition) {
+    publicType = 'unclear';
+  } else if (imageType === 'harvested_produce' && ['not_applicable', 'condition_unclear'].includes(assessment) && messageCode === 'HARVESTED_PRODUCE' && !condition) {
+    publicType = 'harvested_produce';
+  } else if (imageType === 'living_crop') {
+    publicType = 'crop_or_plant';
+    if (assessment === 'healthy' && messageCode === 'HEALTHY' && !condition) healthStatus = 'healthy';
+    else if (assessment === 'possibly_diseased' && messageCode === 'POSSIBLE_DISEASE' && condition) healthStatus = 'possibly_diseased';
+    else if (assessment === 'condition_unclear' && ['UNCLEAR', 'UNSUPPORTED_CROP'].includes(messageCode) && !condition) healthStatus = 'unclear';
+    else invalidResponse();
+  } else invalidResponse();
 
   return {
-    imageType,
-    isCropImage: true,
-    crop,
-    // A general vision model does not provide calibrated crop-disease probabilities.
+    imageType: publicType,
+    isCropImage: publicType === 'not_crop' ? false : publicType === 'unclear' ? null : true,
+    crop: publicType === 'not_crop' || publicType === 'unclear' ? null : crop,
     cropConfidence: null,
-    healthStatus: normalizedHealthStatus,
-    possibleCondition: normalizedHealthStatus === 'possibly_diseased' ? possibleCondition : null,
+    healthStatus,
+    possibleCondition: healthStatus === 'possibly_diseased' ? condition : null,
     conditionConfidence: null,
-    result: normalizedHealthStatus === 'possibly_diseased' ? possibleCondition : null,
+    result: healthStatus === 'possibly_diseased' ? condition : null,
     confidence: null,
-    observations,
-    nextStep,
+    messageCode,
+    observations: [],
+    nextStep: null,
     requiresExpertConfirmation: true,
-    analysisMode: 'openai-vision'
+    analysisMode: 'crop-image-screening'
   };
-}
-
-function extractOutputText(payload) {
-  if (typeof payload?.output_text === 'string') return payload.output_text;
-  for (const outputItem of payload?.output || []) {
-    for (const contentItem of outputItem?.content || []) {
-      if (contentItem?.type === 'output_text' && typeof contentItem.text === 'string') return contentItem.text;
-    }
-  }
-  return null;
-}
-
-function visionInstructions() {
-  return [
-    'Inspect the actual image pixels for crop-photo screening. First decide whether a crop or plant is visibly the main relevant subject.',
-    'Classify anime, posters, people, vehicles, buildings, documents, screenshots, logos, memes, animals, and scenery without a visible plant subject as not_crop.',
-    'Use unclear when the image is too dark, blurry, distant, heavily cropped, or otherwise insufficient to verify a plant subject.',
-    'The untrusted dashboard crop hint in the user input is only a weak hint. It must never override what is visible in the image.',
-    'Only for crop_or_plant, assess whether the visible plant appears healthy, possibly_diseased, or unclear. Do not force a disease.',
-    'Name a possible condition only when supported by visible symptoms. Keep both confidence fields null because no calibrated classifier score is available.',
-    'Give concise visible observations and a safe next step. Do not prescribe pesticide dosage. Always require expert confirmation.'
-  ].join(' ');
 }
 
 export async function analyzeCropImage({
   imageBuffer,
   mimeType,
   cropHint,
-  apiKey = process.env.OPENAI_API_KEY,
-  model = process.env.OPENAI_VISION_MODEL || DEFAULT_VISION_MODEL,
-  timeoutMs = Number(process.env.OPENAI_VISION_TIMEOUT_MS || DEFAULT_TIMEOUT_MS),
+  serviceUrl = process.env.CROP_VISION_URL,
+  apiKey = process.env.CROP_VISION_API_KEY,
+  timeoutMs = Number(process.env.CROP_VISION_TIMEOUT_MS || DEFAULT_TIMEOUT_MS),
   fetchImpl = globalThis.fetch
 }) {
-  if (!apiKey || !model) {
-    throw new CropVisionError('VISION_NOT_CONFIGURED', 503, 'Crop-image analysis is not configured.');
-  }
-  if (!Buffer.isBuffer(imageBuffer) || !mimeType) {
+  if (!serviceUrl || !apiKey) throw new CropVisionError('VISION_NOT_CONFIGURED', 503, 'Crop-image analysis is not configured.');
+  if (!Buffer.isBuffer(imageBuffer) || !['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
     throw new CropVisionError('VISION_INVALID_IMAGE', 400, 'The uploaded image could not be read.');
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_TIMEOUT_MS);
-  let response;
+  let endpoint;
   try {
-    const hint = cleanNullableText(cropHint, 40);
-    response = await fetchImpl(OPENAI_RESPONSES_URL, {
+    const base = new URL(serviceUrl);
+    if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.search || base.hash) throw new Error('Invalid URL');
+    endpoint = `${base.toString().replace(/\/+$/, '')}/predict`;
+  } catch {
+    throw new CropVisionError('VISION_NOT_CONFIGURED', 503, 'Crop-image analysis is not configured.');
+  }
+
+  const form = new FormData();
+  const extension = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[mimeType];
+  form.append('image', new Blob([imageBuffer], { type: mimeType }), `crop-image.${extension}`);
+  const hint = cleanNullableText(cropHint, 40);
+  if (hint) form.append('cropHint', hint);
+
+  const controller = new AbortController();
+  const duration = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_TIMEOUT_MS;
+  const timer = setTimeout(() => controller.abort(), duration);
+  try {
+    const response = await fetchImpl(endpoint, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model,
-        store: false,
-        instructions: visionInstructions(),
-        input: [{
-          role: 'user',
-          content: [
-            { type: 'input_text', text: `Classify this uploaded image and, only if it is a crop or plant, screen its visible health. Untrusted dashboard crop hint: ${JSON.stringify(hint)}.` },
-            { type: 'input_image', image_url: `data:${mimeType};base64,${imageBuffer.toString('base64')}`, detail: 'high' }
-          ]
-        }],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'crop_image_analysis',
-            strict: true,
-            schema: IMAGE_ANALYSIS_SCHEMA
-          }
-        }
-      }),
+      headers: { 'X-KisanSetu-Key': apiKey },
+      body: form,
       signal: controller.signal
     });
+    if (!response.ok) throw new CropVisionError('VISION_UNAVAILABLE', 502, 'Crop-image analysis is temporarily unavailable.');
+    let payload;
+    try {
+      payload = await response.json();
+    } catch {
+      invalidResponse();
+    }
+    return normalizeCropVisionAnalysis(payload);
   } catch (error) {
-    if (error?.name === 'AbortError') throw new CropVisionError('VISION_TIMEOUT', 504, 'Crop-image analysis timed out.');
+    if (controller.signal.aborted || error?.name === 'AbortError') {
+      throw new CropVisionError('VISION_TIMEOUT', 504, 'Crop-image analysis timed out.');
+    }
+    if (error instanceof CropVisionError) throw error;
     throw new CropVisionError('VISION_UNAVAILABLE', 502, 'Crop-image analysis is temporarily unavailable.');
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(timer);
   }
-
-  if (!response.ok) {
-    throw new CropVisionError('VISION_UNAVAILABLE', 502, 'Crop-image analysis is temporarily unavailable.');
-  }
-
-  let payload;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new CropVisionError('VISION_INVALID_RESPONSE', 502, 'Crop-image analysis returned an invalid response.');
-  }
-
-  const outputText = extractOutputText(payload);
-  if (!outputText) throw new CropVisionError('VISION_INVALID_RESPONSE', 502, 'Crop-image analysis returned an invalid response.');
-
-  let candidate;
-  try {
-    candidate = JSON.parse(outputText);
-  } catch {
-    throw new CropVisionError('VISION_INVALID_RESPONSE', 502, 'Crop-image analysis returned an invalid response.');
-  }
-
-  return normalizeCropVisionAnalysis(candidate);
 }
 
 export function detectSupportedImageMime(buffer) {
