@@ -6,16 +6,19 @@ KisanSetu is a market-intelligence and transaction platform that helps farmers a
 
 ## Project status
 
-Hackathon-ready prototype with a working frontend, sample-data API, lightweight forecast service, buyer matching, negotiation, logistics selection, and payment-tracking journey. The original plan and MVP specification are in [docs/phase-1-plan.md](docs/phase-1-plan.md).
+Hackathon-ready prototype with a working React frontend, Express API, lightweight forecasting service, buyer matching, negotiation, logistics selection, payment tracking, MongoDB-backed Shared Logistics, and MongoDB/Mongoose-backed P2P Equipment Sharing. The original plan and MVP specification are in [docs/phase-1-plan.md](docs/phase-1-plan.md).
 
 ## Technology used in this prototype
 
-- Frontend: React + Tailwind CSS
+- Frontend: React 18 + Vite + i18next + Lucide React + Tailwind/PostCSS tooling
 - Backend: Node.js + Express
-- ML service: Python + FastAPI + scikit-learn
-- Demo data store: resettable in-memory seeded data
+- Database: MongoDB Atlas / MongoDB Node.js driver for geospatial Shared Logistics, plus Mongoose for Equipment Sharing
+- ML price service: Python + FastAPI + scikit-learn
+- Crop image service: standalone FastAPI CropVision ML service deployed separately
+- Speech: Microsoft Azure Speech for multilingual read-aloud
+- Demo data: hybrid architecture — resettable in-memory seeded data for the core market/offer/transaction flow, with MongoDB persistence for geospatial lot mirrors and equipment marketplace data
 
-MongoDB remains the planned persistence layer for a production deployment, but it is not connected in this demo build. This keeps the resettable hackathon flow reliable without claiming persistence that is not present.
+MongoDB is actively connected for Shared Logistics and P2P Equipment Sharing. The existing crop-lot, offer, transaction, and core hackathon demo flows intentionally remain resettable/in-memory unless otherwise noted.
 
 ## MVP flow
 
@@ -40,6 +43,8 @@ Farmer/FPO → Market prices and forecast → Crop lot → Buyer matches → Off
 - **AI Crop & Price Advisor** with browser microphone input, Azure-generated multilingual read-aloud audio, a seven-day advisor endpoint, and validated crop-image uploads. Crop-photo screening uses the configured standalone ML service; its results are informational and require expert confirmation, not a definitive agronomic diagnosis.
 - **12-language i18next interface**: English, Hindi, Marathi, Urdu, Turkish, Spanish, Punjabi, Odia, Bengali, Gujarati, Telugu, and Tamil. Urdu also switches the page to an RTL-aware layout.
 - **Offline-first PWA shell** with an install manifest, service worker, offline page, connection indicator, and cached read-only market/API responses. Transaction-changing actions remain network-only.
+- **Shared Logistics** using MongoDB GeoJSON, a `2dsphere` index, and `$near` queries to find compatible open lots going to the same mandi within a configurable radius (15 km by default).
+- **P2P Equipment Sharing** using MongoDB + Mongoose for machinery listings, availability filtering, rental requests, owner approval/rejection, cancellation/completion, and demo-user switching.
 - **Chat-controlled Oneko kitty** that can be enabled or disabled with deterministic local commands without sending those commands to the backend.
 
 ## Data transparency
@@ -61,6 +66,9 @@ This prototype intentionally labels its demo data in the interface:
 | Crop image advisor | `POST /api/advisor/disease?crop=Tomato` | Accept a JPG, PNG, or WebP body (maximum 6 MB); the backend sends it to the configured standalone CropVision ML service and returns a safe screening result. |
 | Azure speech | `POST /api/tts` | Convert exact localized assistant text into MP3 using the whitelisted Azure voice for the selected language. |
 | Crop lots | `GET/POST /api/lots` | View or publish a farmer crop lot. |
+| Shared logistics | `GET /api/lots/:id/shared-logistics?radiusKm=15` | Find nearby open lots going to the same mandi and estimate pooled freight savings. |
+| Equipment | `GET/POST /api/equipment` | Browse/filter machinery or publish a farmer/FPO listing. |
+| Equipment rentals | `POST /api/equipment/:id/rent`, `GET /api/equipment/rentals/mine`, `PATCH /api/equipment/rentals/:id/status` | Request, review, approve/reject, cancel, or complete equipment rentals. |
 | Recommendations | `GET /api/recommendations/sell` | Storage-aware sell/hold recommendation and net-price options. |
 | Buyers | `GET /api/buyers?crop=Tomato` | Demo buyers, optionally filtered to the selected crop. |
 | Offers | `GET/PATCH /api/offers/:id` | View, accept, decline, or counter a buyer offer. |
@@ -94,6 +102,18 @@ AZURE_SPEECH_REGION=your-resource-region
 ```
 
 Never prefix the key with `VITE_`, place it in frontend code, or commit the local `.env`. Without these values the rest of KisanSetu continues to work, while read-aloud returns a localized temporary-unavailable message.
+
+For MongoDB-backed Shared Logistics and Equipment Sharing, configure these backend-only values in `backend/.env`:
+
+```text
+MONGODB_URI=your-private-mongodb-connection-string
+MONGODB_DB_NAME=kisansetu
+SHARED_LOGISTICS_RADIUS_KM=15
+SHARED_LOGISTICS_MAX_MATCHES=20
+EQUIPMENT_DEMO_SEED_ENABLED=true
+```
+
+`MONGODB_URI` must never be exposed through a `VITE_*` variable or committed to Git. If MongoDB is unavailable, the core in-memory KisanSetu demo continues to run; MongoDB-dependent features return safe temporary-unavailable responses.
 
 TTS audio uses two bounded in-memory cache layers. The frontend keeps up to 75 returned MP3 `Blob` objects per page session and reuses them for the exact same language and text; it creates and revokes a temporary object URL for every playback. The backend keeps up to 200 voice-aware MP3 entries for 24 hours and coalesces identical requests that arrive while Azure synthesis is still running. **The backend TTS cache is memory-only and resets when the backend process restarts or redeploys.** No persistent cache or Redis service is used.
 
@@ -160,7 +180,9 @@ The backend calls `GET http://localhost:8000/predict?crop=Onion&days=7`. Respons
 6. Counter, decline, or accept the offer. Accepting creates a transaction.
 7. Select a logistics option and advance the transaction through pickup, transit, and delivery.
 8. Confirm payment received and point out the payment reference and final paid status.
-9. Use **Reset demo** before the next presentation.
+9. Open **Equipment sharing**, request a demo machine as one farmer, switch to its owner using the sidebar profile switcher, and approve/reject the rental.
+10. Demonstrate **Shared freight** on geo-enabled crop lots going to the same mandi.
+11. Use **Reset demo** before the next presentation; this also clears equipment rentals, removes user-created equipment listings, and restores the demo machinery set.
 
 ## Shared Logistics geospatial matching
 

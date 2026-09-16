@@ -275,3 +275,887 @@ html[lang="ur"] .support-card form input { direction: rtl; text-align: left; }
 
 @media (max-width: 700px) {
 }
+
+/* --- KisanSetu reference hero + full-bleed main footer --- */
+.app-shell main {
+  margin-left: 252px;
+  width: calc(100% - 252px);
+  max-width: none;
+  padding: 30px 0 0;
+  overflow: hidden;
+}
+.main-content-inner { padding: 0 5.2% 60px; }
+
+/* Hero: use the selected ChatGPT reference background, with a real farm texture
+   on the left and the farmer/field composition on the right. */
+.hero-card {
+  min-height: 258px;
+  padding: 32px 36px;
+  border-radius: 18px;
+  color: #fff;
+  isolation: isolate;
+  background-color: #0a5331;
+  background-image: url('/kisansetu-hero-reference.jpg');
+  background-repeat: no-repeat;
+  background-position: center right;
+  background-size: cover;
+  box-shadow: 0 14px 34px rgba(14, 62, 38, .12);
+}
+.hero-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* Only a dark readability fade. No green glow behind the text. */
+  background: linear-gradient(90deg,
+    rgba(0, 0, 0, .30) 0%,
+    rgba(0, 0, 0, .18) 36%,
+    rgba(0, 0, 0, .04) 58%,
+    rgba(0, 0, 0, .02) 100%);
+}
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  width: min(56%, 650px);
+  align-self: center;
+}
+.hero-card .eyebrow,
+.hero-card h2,
+.hero-card p:not(.eyebrow) {
+  /* Explicitly black shadow; no green shadow/glow. */
+  text-shadow: 0 2px 4px rgba(0, 0, 0, .82), 0 4px 14px rgba(0, 0, 0, .52);
+}
+.hero-card .eyebrow { color: #e3f3e8; }
+.hero-card h2 {
+  font-size: clamp(27px, 2.1vw, 36px);
+  line-height: 1.12;
+  margin-bottom: 10px;
+}
+.hero-card p:not(.eyebrow) {
+  color: #f2f8f4;
+  max-width: 560px;
+  font-size: 13px;
+}
+.hero-card .light-button {
+  margin-top: 4px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.16);
+  text-shadow: none;
+}
+.hero-art { display: none !important; }
+
+/* Footer: full bleed inside the MAIN PAGE only. The sidebar stays separate.
+   The reference artwork is one continuous background so it does not look stitched. */
+.site-footer {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  margin: 48px 0 0;
+  overflow: hidden;
+  color: #f2f8f4;
+  background-color: #051f15;
+  background-image: url('/kisansetu-footer-reference.jpg');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  border: 0;
+  border-radius: 0;
+  box-shadow: 0 -18px 46px rgba(21, 64, 40, .08);
+}
+.site-footer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* Keep the reference art visible while ensuring the HTML stays readable. */
+  background: linear-gradient(90deg,
+    rgba(1, 18, 11, .03) 0%,
+    rgba(1, 18, 11, .10) 21%,
+    rgba(1, 22, 14, .20) 35%,
+    rgba(1, 22, 14, .20) 77%,
+    rgba(1, 18, 11, .05) 100%);
+}
+.site-footer-art { display: none !important; }
+.site-footer-main {
+  position: relative;
+  z-index: 1;
+  min-height: 505px;
+  display: grid;
+  grid-template-columns: minmax(250px, 22%) minmax(285px, 28%) minmax(175px, 17%) minmax(285px, 1fr);
+  gap: clamp(18px, 2.2vw, 40px);
+  align-items: center;
+  padding: 52px 3.8% 42px;
+}
+.site-footer-art-spacer { min-height: 320px; }
+.site-footer-brand { max-width: 390px; }
+.site-footer-logo { display: flex; align-items: center; gap: 11px; margin-bottom: 16px; }
+.site-footer-logo > span {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #69f28f;
+  background: rgba(27, 114, 65, .28);
+  border: 1px solid rgba(97, 225, 135, .22);
+}
+.site-footer-logo strong {
+  font-size: clamp(23px, 2vw, 31px);
+  letter-spacing: -.8px;
+  color: #fff;
+}
+.site-footer-logo strong span { color: #52e985; }
+.site-footer-brand > p {
+  margin: 0 0 21px;
+  color: #d7e4dc;
+  line-height: 1.55;
+  font-size: 13px;
+  max-width: 360px;
+}
+.site-footer-contact { display: grid; gap: 10px; margin-bottom: 20px; }
+.site-footer-contact > a,
+.site-footer-contact > span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #edf6f0;
+  font-size: 12px;
+  text-decoration: none;
+}
+.site-footer-contact > a:hover { color: #6df59a; }
+.site-footer-status { color: #58ed88 !important; }
+.site-footer-status i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #32e36d;
+  box-shadow: 0 0 0 5px rgba(50, 227, 109, .10);
+}
+.site-footer-socials { display: flex; gap: 9px; }
+.site-footer-socials a {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  border: 1px solid rgba(205, 231, 214, .23);
+  background: rgba(9, 36, 24, .64);
+  text-decoration: none;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+.site-footer-socials a:nth-child(3) { color: #f25a4a; }
+.site-footer-socials a:nth-child(4) { color: #f05ba9; }
+.site-footer-socials a:hover {
+  transform: translateY(-2px);
+  border-color: rgba(93, 242, 137, .55);
+  background: rgba(24, 87, 51, .76);
+}
+.site-footer-column {
+  min-width: 0;
+  padding-left: 24px;
+  border-left: 1px solid rgba(199, 226, 207, .13);
+}
+.site-footer-column h3 {
+  position: relative;
+  margin: 0 0 20px;
+  color: #f4f8f5;
+  text-transform: uppercase;
+  letter-spacing: .065em;
+  font-size: 12px;
+}
+.site-footer-column h3::before {
+  content: '';
+  position: absolute;
+  left: -25px;
+  top: -4px;
+  width: 2px;
+  height: 23px;
+  background: #ff3b38;
+  border-radius: 3px;
+}
+.site-footer-navigation > div { display: grid; gap: 8px; }
+.site-footer-navigation button,
+.site-footer-navigation a {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #dbe8df;
+  text-decoration: none;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.site-footer-navigation button:hover,
+.site-footer-navigation a:hover { color: #65f092; }
+.site-footer-impact {
+  max-width: 330px;
+  padding-right: 34px;
+}
+.impact-item {
+  display: grid;
+  grid-template-columns: 45px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin: 0 0 15px;
+}
+.impact-item > span {
+  width: 45px;
+  height: 45px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #60ef8d;
+  background: rgba(11, 63, 37, .78);
+  border: 1px solid rgba(82, 200, 117, .18);
+}
+.impact-item strong,
+.impact-item small { display: block; }
+.impact-item strong { color: #fff; font-size: 12px; margin-bottom: 3px; }
+.impact-item small { color: #c4d7ca; font-size: 10px; line-height: 1.35; }
+.site-footer-bottom {
+  position: relative;
+  z-index: 2;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 4.4%;
+  color: #c5d5cb;
+  background: rgba(1, 18, 11, .72);
+  border-top: 1px solid rgba(199, 226, 207, .13);
+  font-size: 10px;
+}
+.site-footer-bottom a { color: inherit; text-decoration: none; }
+.site-footer-bottom a:hover { color: #64ed91; }
+.site-footer-bottom > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.site-footer-bottom svg { color: #64ef90; }
+
+@media (max-width: 1180px) {
+  .site-footer-main {
+    grid-template-columns: 18% minmax(250px, 1.2fr) minmax(165px, .75fr) minmax(245px, 1fr);
+    gap: 20px;
+    padding-inline: 3%;
+  }
+  .site-footer-impact { padding-right: 18px; }
+}
+
+@media (max-width: 1050px) {
+  .app-shell main {
+    margin-left: 210px;
+    width: calc(100% - 210px);
+    padding: 25px 0 0;
+  }
+  .main-content-inner { padding: 0 3% 48px; }
+  .hero-card {
+    min-height: 235px;
+    padding: 28px;
+    background-position: 64% center;
+  }
+  .hero-copy { width: 60%; }
+  .site-footer-main {
+    min-height: 455px;
+    grid-template-columns: minmax(220px, 1.15fr) minmax(165px, .75fr) minmax(240px, 1fr);
+  }
+  .site-footer-art-spacer { display: none; }
+  .site-footer-brand { padding-left: 18px; }
+}
+
+@media (max-width: 820px) {
+  .site-footer { background-position: 40% center; }
+  .site-footer-main {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    min-height: 0;
+    padding-top: 58px;
+  }
+  .site-footer-brand {
+    grid-column: 1 / -1;
+    max-width: 520px;
+  }
+  .site-footer-impact { padding-right: 0; }
+}
+
+@media (max-width: 700px) {
+  .app-shell main {
+    margin-left: 0;
+    width: 100%;
+    padding: 16px 0 0;
+    overflow-x: hidden;
+  }
+  .main-content-inner { padding: 0 16px 32px; }
+  .hero-card {
+    min-height: 305px;
+    padding: 23px 21px;
+    background-size: auto 100%;
+    background-position: 70% center;
+  }
+  .hero-card::after {
+    background: linear-gradient(90deg,
+      rgba(0,0,0,.60) 0%,
+      rgba(0,0,0,.40) 56%,
+      rgba(0,0,0,.10) 100%);
+  }
+  .hero-copy { width: 82%; align-self: flex-end; }
+  .hero-card h2 { font-size: 24px; }
+  .site-footer {
+    margin-top: 34px;
+    background-position: center center;
+  }
+  .site-footer::before { background: rgba(1, 19, 12, .64); }
+  .site-footer-main {
+    grid-template-columns: 1fr;
+    padding: 44px 22px 30px;
+    gap: 30px;
+  }
+  .site-footer-brand { grid-column: auto; padding-left: 0; }
+  .site-footer-column { padding-left: 19px; }
+  .site-footer-impact { padding-right: 0; }
+  .site-footer-bottom {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 16px 22px;
+    line-height: 1.5;
+  }
+}
+
+/* =========================================================
+   FINAL VISUAL LOCK — exact supplied hero/footer artwork + scrollspy
+   ========================================================= */
+
+/* Keep normal content inset, but let the footer bleed edge-to-edge inside main. */
+.app-shell main {
+  margin-left: 252px;
+  width: calc(100% - 252px);
+  max-width: none;
+  padding: 30px 0 0;
+  overflow-x: clip;
+}
+.main-content-inner {
+  padding: 0 5.2% 32px;
+}
+
+/* Anchor positions feel natural when navigating/scroll-spying. */
+#dashboard-overview,
+#market-prices,
+#crop-lots,
+#buyer-matches,
+#logistics,
+#equipment-sharing,
+#transactions {
+  scroll-margin-top: 24px;
+}
+
+/* Sidebar active state follows the section currently passing through the viewport. */
+.sidebar nav button,
+.mobile-nav nav button {
+  transition: background .18s ease, color .18s ease, transform .18s ease;
+}
+.sidebar nav button.active,
+.sidebar nav button[aria-current='page'],
+.mobile-nav nav button.active,
+.mobile-nav nav button[aria-current='page'] {
+  color: #176c41;
+  background: #e8f5eb;
+}
+.sidebar nav button:not(.active):hover,
+.mobile-nav nav button:not(.active):hover {
+  background: #f4f8f5;
+  color: #2d6f4a;
+}
+
+/* HERO — use the exact high-resolution background supplied by the user. */
+.hero-card {
+  position: relative;
+  isolation: isolate;
+  min-height: 330px;
+  padding: 38px 40px;
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  color: #fff;
+  background-color: #071b11;
+  background-image: url('/kisansetu-hero-final.png');
+  background-repeat: no-repeat;
+  background-position: center 46%;
+  background-size: cover;
+  box-shadow: 0 16px 38px rgba(11, 53, 32, .14);
+}
+.hero-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* Neutral black readability fade only; never a green text glow. */
+  background: linear-gradient(90deg,
+    rgba(0, 0, 0, .42) 0%,
+    rgba(0, 0, 0, .26) 30%,
+    rgba(0, 0, 0, .08) 48%,
+    rgba(0, 0, 0, 0) 66%);
+}
+.hero-card::after { content: none !important; }
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  width: min(52%, 650px);
+  align-self: center;
+}
+.hero-card .eyebrow,
+.hero-card h2,
+.hero-card p:not(.eyebrow) {
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .92), 0 5px 16px rgba(0, 0, 0, .58);
+}
+.hero-card .eyebrow { color: #eef8f1; }
+.hero-card h2 {
+  margin: 4px 0 10px;
+  font-size: clamp(28px, 2.25vw, 38px);
+  line-height: 1.12;
+  letter-spacing: -.75px;
+}
+.hero-card p:not(.eyebrow) {
+  max-width: 570px;
+  color: #f5faf6;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.hero-card .light-button {
+  margin-top: 6px;
+  text-shadow: none;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, .18);
+}
+.hero-art { display: none !important; }
+
+/* FOOTER — exact supplied background, full width of MAIN only, no horizontal gutters. */
+.site-footer {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+  color: #f3f8f5;
+  background-color: #031a11;
+  background-image: url('/kisansetu-footer-final.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  box-shadow: 0 -16px 42px rgba(18, 61, 38, .07);
+}
+.site-footer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  /* Slight center veil only, preserving both handwritten background slogans. */
+  background: linear-gradient(90deg,
+    rgba(2, 19, 12, .02) 0%,
+    rgba(2, 19, 12, .04) 21%,
+    rgba(2, 19, 12, .17) 34%,
+    rgba(2, 19, 12, .22) 72%,
+    rgba(2, 19, 12, .03) 100%);
+}
+.site-footer-art { display: none !important; }
+.site-footer-main {
+  position: relative;
+  z-index: 1;
+  min-height: 410px;
+  display: grid;
+  grid-template-columns: 22% 28% 17% 23%;
+  gap: 2%;
+  align-items: center;
+  padding: 38px 3.2% 34px;
+}
+.site-footer-art-spacer {
+  min-height: 270px;
+}
+.site-footer-brand {
+  max-width: 390px;
+}
+.site-footer-impact {
+  max-width: 275px;
+  padding-right: 0;
+}
+.site-footer-bottom {
+  position: relative;
+  z-index: 2;
+  min-height: 56px;
+  padding: 13px 4.2%;
+  background: rgba(1, 16, 10, .78);
+  border-top: 1px solid rgba(200, 226, 208, .13);
+}
+
+@media (max-width: 1180px) {
+  .site-footer-main {
+    min-height: 390px;
+    grid-template-columns: 18% 31% 20% 25%;
+    gap: 2%;
+    padding-inline: 3%;
+  }
+}
+
+@media (max-width: 1050px) {
+  .app-shell main {
+    margin-left: 210px;
+    width: calc(100% - 210px);
+    padding: 25px 0 0;
+  }
+  .main-content-inner { padding: 0 3% 28px; }
+  .hero-card {
+    min-height: 300px;
+    padding: 30px;
+    background-position: 58% 45%;
+  }
+  .hero-copy { width: 58%; }
+  .site-footer-main {
+    min-height: 385px;
+    grid-template-columns: 29% 21% 26%;
+    gap: 3%;
+    padding: 38px 3% 32px;
+  }
+  .site-footer-art-spacer { display: none; }
+  .site-footer-brand { padding-left: 0; }
+}
+
+@media (max-width: 820px) {
+  .hero-card {
+    min-height: 310px;
+    background-position: 64% center;
+  }
+  .hero-copy { width: 68%; }
+  .site-footer {
+    background-position: center center;
+  }
+  .site-footer::before {
+    background: rgba(1, 18, 11, .50);
+  }
+  .site-footer-main {
+    min-height: 0;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px 34px;
+    align-items: start;
+    padding: 42px 5% 34px;
+  }
+  .site-footer-brand {
+    grid-column: 1 / -1;
+    max-width: 540px;
+  }
+}
+
+@media (max-width: 700px) {
+  .app-shell main {
+    margin-left: 0;
+    width: 100%;
+    padding: 16px 0 0;
+    overflow-x: clip;
+  }
+  .main-content-inner { padding: 0 16px 24px; }
+  .hero-card {
+    min-height: 355px;
+    padding: 24px 21px;
+    border-radius: 16px;
+    background-position: 66% center;
+    background-size: cover;
+    align-items: flex-end;
+  }
+  .hero-card::before {
+    background: linear-gradient(90deg,
+      rgba(0,0,0,.72) 0%,
+      rgba(0,0,0,.52) 55%,
+      rgba(0,0,0,.18) 100%);
+  }
+  .hero-copy { width: 88%; }
+  .hero-card h2 { font-size: 25px; }
+  .site-footer {
+    margin: 0;
+    background-position: 52% center;
+  }
+  .site-footer::before { background: rgba(1, 17, 11, .62); }
+  .site-footer-main {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 42px 22px 30px;
+  }
+  .site-footer-brand { grid-column: auto; }
+  .site-footer-column { padding-left: 18px; }
+  .site-footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 15px 22px;
+  }
+}
+
+/* Final composition tuning: preserve more of the supplied hero and keep footer art unobstructed. */
+@media (min-width: 1051px) {
+  .hero-card {
+    min-height: clamp(350px, 30vw, 400px);
+    background-position: center center;
+  }
+  .site-footer-main {
+    grid-template-columns: 22% 28% 17% 19%;
+  }
+  .site-footer-impact { max-width: 250px; }
+}
+
+/* =========================================================
+   FINAL HERO + FOOTER SIZE/CROP TUNING
+   Uses the existing exact user-supplied images only:
+   /kisansetu-hero-final.png and /kisansetu-footer-final.png
+   ========================================================= */
+
+/* Keep the hero compact and readable while preserving the supplied artwork. */
+@media (min-width: 1051px) {
+  .hero-card {
+    min-height: 300px !important;
+    height: 300px;
+    padding: 30px 38px !important;
+    background-image: url('/kisansetu-hero-final.png') !important;
+    background-repeat: no-repeat !important;
+    background-size: cover !important;
+    background-position: center 49% !important;
+    border-radius: 18px;
+  }
+
+  .hero-card::before {
+    background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, .56) 0%,
+      rgba(0, 0, 0, .38) 28%,
+      rgba(0, 0, 0, .14) 49%,
+      rgba(0, 0, 0, 0) 67%
+    ) !important;
+  }
+
+  .hero-copy {
+    width: min(54%, 640px) !important;
+  }
+
+  .hero-card .eyebrow {
+    margin-bottom: 7px;
+    font-size: 12px;
+    letter-spacing: .055em;
+  }
+
+  .hero-card h2 {
+    margin: 3px 0 9px !important;
+    max-width: 620px;
+    font-size: clamp(30px, 2.2vw, 36px) !important;
+    line-height: 1.1 !important;
+    letter-spacing: -.65px !important;
+  }
+
+  .hero-card p:not(.eyebrow) {
+    max-width: 590px !important;
+    margin-bottom: 10px;
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+  }
+
+  .hero-card .eyebrow,
+  .hero-card h2,
+  .hero-card p:not(.eyebrow) {
+    text-shadow:
+      0 2px 5px rgba(0, 0, 0, .95),
+      0 5px 15px rgba(0, 0, 0, .58) !important;
+  }
+
+  .hero-card .light-button {
+    margin-top: 5px !important;
+    padding: 10px 15px;
+  }
+
+  /*
+   * Footer stays full-width inside MAIN only, but is no longer oversized.
+   * 100% 100% intentionally shows the COMPLETE supplied footer image so the
+   * handwritten left/right artwork is not cut by background-size: cover.
+   */
+  .site-footer {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    background-image: url('/kisansetu-footer-final.png') !important;
+    background-repeat: no-repeat !important;
+    background-size: 100% 100% !important;
+    background-position: center center !important;
+  }
+
+  .site-footer::before {
+    background: linear-gradient(
+      90deg,
+      rgba(2, 19, 12, .01) 0%,
+      rgba(2, 19, 12, .03) 22%,
+      rgba(2, 19, 12, .14) 34%,
+      rgba(2, 19, 12, .18) 73%,
+      rgba(2, 19, 12, .02) 100%
+    ) !important;
+  }
+
+  .site-footer-main {
+    box-sizing: border-box;
+    height: 318px !important;
+    min-height: 318px !important;
+    grid-template-columns: 22% 29% 17% 20% !important;
+    gap: 2% !important;
+    align-items: center !important;
+    padding: 25px 3.2% 20px !important;
+  }
+
+  .site-footer-art-spacer {
+    min-height: 220px !important;
+  }
+
+  .site-footer-brand {
+    max-width: 370px !important;
+  }
+
+  .site-footer-brand > p {
+    margin: 9px 0 12px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+
+  .site-footer-logo strong {
+    font-size: 27px;
+  }
+
+  .site-footer-logo > span {
+    width: 43px;
+    height: 43px;
+  }
+
+  .site-footer-contact {
+    gap: 7px;
+  }
+
+  .site-footer-contact a,
+  .site-footer-contact > span {
+    font-size: 12px;
+  }
+
+  .site-footer-socials {
+    margin-top: 13px;
+    gap: 9px;
+  }
+
+  .site-footer-socials a {
+    width: 40px;
+    height: 40px;
+  }
+
+  .site-footer-column h3 {
+    margin-bottom: 12px;
+    font-size: 12.5px;
+  }
+
+  .site-footer-navigation > div {
+    gap: 5px;
+  }
+
+  .site-footer-navigation button,
+  .site-footer-navigation a {
+    font-size: 11.5px;
+    line-height: 1.25;
+  }
+
+  .site-footer-impact {
+    max-width: 250px !important;
+  }
+
+  .site-footer-impact .impact-item {
+    gap: 9px;
+    margin-bottom: 11px;
+  }
+
+  .site-footer-impact .impact-item > span {
+    width: 39px;
+    height: 39px;
+    min-width: 39px;
+  }
+
+  .site-footer-impact .impact-item strong {
+    font-size: 11.5px;
+  }
+
+  .site-footer-impact .impact-item small {
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .site-footer-bottom {
+    box-sizing: border-box;
+    height: 46px !important;
+    min-height: 46px !important;
+    padding: 9px 4.2% !important;
+    font-size: 10.5px;
+  }
+}
+
+/* Tablet: retain the same images without restoring the oversized desktop footer. */
+@media (min-width: 701px) and (max-width: 1050px) {
+  .hero-card {
+    min-height: 285px !important;
+    height: 285px;
+    padding: 27px 29px !important;
+    background-image: url('/kisansetu-hero-final.png') !important;
+    background-position: 58% 50% !important;
+  }
+
+  .hero-copy { width: 60% !important; }
+
+  .site-footer {
+    background-image: url('/kisansetu-footer-final.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+  }
+
+  .site-footer-main {
+    box-sizing: border-box;
+    min-height: 340px !important;
+    padding: 30px 3% 25px !important;
+  }
+
+  .site-footer-bottom {
+    min-height: 46px !important;
+    padding: 10px 3% !important;
+  }
+}
+
+/* Mobile: readability takes priority, still using only the same supplied images. */
+@media (max-width: 700px) {
+  .hero-card {
+    min-height: 310px !important;
+    height: auto;
+    padding: 23px 20px !important;
+    background-image: url('/kisansetu-hero-final.png') !important;
+    background-size: cover !important;
+    background-position: 68% center !important;
+  }
+
+  .hero-copy { width: 90% !important; }
+
+  .hero-card h2 {
+    font-size: 24px !important;
+    line-height: 1.12 !important;
+  }
+
+  .site-footer {
+    background-image: url('/kisansetu-footer-final.png') !important;
+    background-size: cover !important;
+    background-position: center !important;
+  }
+}

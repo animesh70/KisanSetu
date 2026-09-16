@@ -7,6 +7,7 @@ import LotModal from './components/LotModal';
 import KisanAssistant from './components/KisanAssistant';
 import PochitaFollower from './components/PochitaFollower';
 import EquipmentMarketplace from './components/EquipmentMarketplace.jsx';
+import SiteFooter from './components/SiteFooter.jsx';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGE_OPTIONS } from './i18n';
 import { canUseSharedLogistics, sharedLogisticsStatusKey } from './services/sharedLogistics.js';
@@ -40,6 +41,15 @@ const EQUIPMENT_DEMO_USERS = [
   { id: 'farmer-4', name: 'Ramesh Shinde', location: 'Pune' }
 ];
 const EQUIPMENT_DEMO_USER_STORAGE_KEY = 'kisansetu-equipment-demo-user';
+const NAV_SECTIONS = [
+  { label: 'Dashboard', id: 'dashboard-overview' },
+  { label: 'Market prices', id: 'market-prices' },
+  { label: 'My crop lots', id: 'crop-lots' },
+  { label: 'Buyer matches', id: 'buyer-matches' },
+  { label: 'Logistics', id: 'logistics' },
+  { label: 'Equipment sharing', id: 'equipment-sharing' },
+  { label: 'Transactions', id: 'transactions' }
+];
 function initialEquipmentDemoUser() {
   if (typeof window === 'undefined') return 'farmer-1';
   const saved = window.localStorage.getItem(EQUIPMENT_DEMO_USER_STORAGE_KEY);
@@ -109,6 +119,41 @@ export default function App() {
     } catch { /* The dashboard still has market-data fallback for offline demo mode. */ }
   };
   useEffect(() => { refreshWorkflow(); }, []);
+  useEffect(() => {
+    let frame = 0;
+
+    const syncActiveNavigation = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const probeY = window.scrollY + Math.min(220, window.innerHeight * 0.28);
+        let nextActive = 'Dashboard';
+
+        for (const section of NAV_SECTIONS) {
+          const node = document.getElementById(section.id);
+          if (!node) continue;
+          const sectionTop = node.getBoundingClientRect().top + window.scrollY;
+          if (sectionTop <= probeY) nextActive = section.label;
+          else break;
+        }
+
+        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8) {
+          nextActive = 'Transactions';
+        }
+
+        setActiveNav((current) => current === nextActive ? current : nextActive);
+      });
+    };
+
+    syncActiveNavigation();
+    window.addEventListener('scroll', syncActiveNavigation, { passive: true });
+    window.addEventListener('resize', syncActiveNavigation);
+    return () => {
+      window.removeEventListener('scroll', syncActiveNavigation);
+      window.removeEventListener('resize', syncActiveNavigation);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
   const showNotice = (key, params = {}) => setNotice({ key, params });
   const notify = (detailKey, titleKey = 'alerts.updateTitle', params = {}) => {
     showNotice(detailKey, params);
@@ -195,7 +240,7 @@ export default function App() {
 
   const navigateTo = (item) => {
     setActiveNav(item);
-    const targetId = { Dashboard: 'dashboard', 'Market prices': 'market-prices', 'My crop lots': 'crop-lots', 'Buyer matches': 'buyer-matches', Logistics: 'logistics', 'Equipment sharing': 'equipment-sharing', Transactions: 'transactions' }[item];
+    const targetId = NAV_SECTIONS.find((section) => section.label === item)?.id;
     document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -227,10 +272,10 @@ export default function App() {
     </div>
   </div>;
   return <div className="app-shell">
-    <aside className="sidebar"><div className="brand"><span className="brand-mark"><Leaf size={23}/></span><div><strong>KisanSetu</strong><small>{t('brandSubtitle')}</small></div></div><nav>{navItems.map(({ label, text, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} onClick={() => navigateTo(label)}><Icon size={19}/>{text}</button>)}</nav>{demoAccountFooter}</aside>
-    {mobileNavOpen && <div className="mobile-nav-layer"><button className="mobile-nav-backdrop" aria-label={t('page.close')} onClick={() => setMobileNavOpen(false)}/><aside className="mobile-nav" aria-label={t('nav.dashboard')}><div className="mobile-nav-head"><div className="brand"><span className="brand-mark"><Leaf size={21}/></span><div><strong>KisanSetu</strong><small>{t('brandSubtitle')}</small></div></div><button type="button" className="icon-button" aria-label={t('page.close')} onClick={() => setMobileNavOpen(false)}>×</button></div><nav>{navItems.map(({ label, text, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} onClick={() => { navigateTo(label); setMobileNavOpen(false); }}><Icon size={19}/>{text}</button>)}</nav>{demoAccountFooter}</aside></div>}
-    <main id="dashboard"><header className="topbar"><button className="mobile-menu" aria-label={t('nav.dashboard')} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(true)}><Menu/></button><div><p className="eyebrow">{t('greeting')} <span className="demo-chip">{t('page.demoData')}</span></p><h1>{t('headline')}</h1></div><div className="top-actions"><select className="language-select" value={i18n.language} onChange={(event) => i18n.changeLanguage(event.target.value)} aria-label={t('page.language')}>{LANGUAGE_OPTIONS.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}</select><button className="farmer-mode-button" onClick={() => setFarmerMode(!farmerMode)}>{farmerMode ? t('page.standardText') : t('page.farmerMode')}</button><div className="notification-wrap"><button className="notification" aria-label={`${notifications.length} ${t('page.notifications')}`} aria-expanded={showNotifications} onClick={() => setShowNotifications(!showNotifications)}><Bell size={20}/>{notifications.length > 0 && <i/>}</button>{showNotifications && <div className="notification-panel" role="status"><div className="notification-panel-head"><div><strong>{t('page.notifications')}</strong><small>{t('page.recentUpdates', { count: notifications.length })}</small></div><button type="button" aria-label={t('page.closeNotifications')} onClick={() => setShowNotifications(false)}>×</button></div><div className="notification-list">{notifications.map((item) => <div className="notification-item" key={item.id}><span className="notification-dot"/><div><strong>{t(item.titleKey, item.params)}</strong><p>{t(item.detailKey, item.params)}</p></div></div>)}</div><button className="notification-review" type="button" onClick={() => { setShowNotifications(false); navigateTo('Transactions'); }}>{t('page.reviewOffers')} <ArrowRight size={14}/></button></div>}</div><button className="help-button" onClick={resetDemo}>{t('reset')}</button></div></header>
-      <section className="hero-card"><div><p className="eyebrow">{t('heroEyebrow')}</p><h2>{t('heroTitle')}</h2><p>{t('heroBody')}</p><button className="light-button" onClick={() => setShowLotForm(true)}>{t('createLot')} <ArrowRight size={18}/></button></div><div className="hero-art"><div className="sun"/><div className="hill hill-one"/><div className="hill hill-two"/><span>🌾</span></div></section>
+    <aside className="sidebar"><div className="brand"><span className="brand-mark"><Leaf size={23}/></span><div><strong>KisanSetu</strong><small>{t('brandSubtitle')}</small></div></div><nav>{navItems.map(({ label, text, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} aria-current={activeNav === label ? 'page' : undefined} onClick={() => navigateTo(label)}><Icon size={19}/>{text}</button>)}</nav>{demoAccountFooter}</aside>
+    {mobileNavOpen && <div className="mobile-nav-layer"><button className="mobile-nav-backdrop" aria-label={t('page.close')} onClick={() => setMobileNavOpen(false)}/><aside className="mobile-nav" aria-label={t('nav.dashboard')}><div className="mobile-nav-head"><div className="brand"><span className="brand-mark"><Leaf size={21}/></span><div><strong>KisanSetu</strong><small>{t('brandSubtitle')}</small></div></div><button type="button" className="icon-button" aria-label={t('page.close')} onClick={() => setMobileNavOpen(false)}>×</button></div><nav>{navItems.map(({ label, text, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} aria-current={activeNav === label ? 'page' : undefined} onClick={() => { navigateTo(label); setMobileNavOpen(false); }}><Icon size={19}/>{text}</button>)}</nav>{demoAccountFooter}</aside></div>}
+    <main id="dashboard"><div className="main-content-inner"><header id="dashboard-overview" className="topbar"><button className="mobile-menu" aria-label={t('nav.dashboard')} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(true)}><Menu/></button><div><p className="eyebrow">{t('greeting')} <span className="demo-chip">{t('page.demoData')}</span></p><h1>{t('headline')}</h1></div><div className="top-actions"><select className="language-select" value={i18n.language} onChange={(event) => i18n.changeLanguage(event.target.value)} aria-label={t('page.language')}>{LANGUAGE_OPTIONS.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}</select><button className="farmer-mode-button" onClick={() => setFarmerMode(!farmerMode)}>{farmerMode ? t('page.standardText') : t('page.farmerMode')}</button><div className="notification-wrap"><button className="notification" aria-label={`${notifications.length} ${t('page.notifications')}`} aria-expanded={showNotifications} onClick={() => setShowNotifications(!showNotifications)}><Bell size={20}/>{notifications.length > 0 && <i/>}</button>{showNotifications && <div className="notification-panel" role="status"><div className="notification-panel-head"><div><strong>{t('page.notifications')}</strong><small>{t('page.recentUpdates', { count: notifications.length })}</small></div><button type="button" aria-label={t('page.closeNotifications')} onClick={() => setShowNotifications(false)}>×</button></div><div className="notification-list">{notifications.map((item) => <div className="notification-item" key={item.id}><span className="notification-dot"/><div><strong>{t(item.titleKey, item.params)}</strong><p>{t(item.detailKey, item.params)}</p></div></div>)}</div><button className="notification-review" type="button" onClick={() => { setShowNotifications(false); navigateTo('Transactions'); }}>{t('page.reviewOffers')} <ArrowRight size={14}/></button></div>}</div><button className="help-button" onClick={resetDemo}>{t('reset')}</button></div></header>
+      <section className="hero-card"><div className="hero-copy"><p className="eyebrow">{t('heroEyebrow')}</p><h2>{t('heroTitle')}</h2><p>{t('heroBody')}</p><button className="light-button" onClick={() => setShowLotForm(true)}>{t('createLot')} <ArrowRight size={18}/></button></div></section>
       <section className="search-panel"><div className="search-title"><Sparkles size={20}/><span>{t('opportunity')}</span></div><label>{t('crop')}<select value={filters.crop} onChange={(event) => setFilters({ ...filters, crop: event.target.value })}><option value="Onion">{t('crops.onion')}</option><option value="Tomato">{t('crops.tomato')}</option><option value="Soybean">{t('crops.soybean')}</option></select></label><label>{t('location')}<input value={filters.location} onChange={(event) => setFilters({ ...filters, location: event.target.value })}/></label><label>{t('quantity')}<input type="number" value={filters.quantity} onChange={(event) => setFilters({ ...filters, quantity: event.target.value })}/></label><button className="primary-button" onClick={loadDashboard}>{loading ? t('checking') : t('checkPrices')}</button></section>
       {notice && <div className="notice notice-toast" role="status" aria-live="polite"><span className="toast-icon"><CheckCircle2 size={18}/></span><span>{t(notice.key, notice.params)}</span><button type="button" aria-label={t('page.dismiss')} onClick={() => setNotice(null)}>×</button></div>}
       <section className="stats-grid"><StatCard label={t('page.bestMandiRate')} value={formatPrice(bestMarket?.modalPrice)} note={`${bestMarket?.mandiName || t('page.nearbyMandi')} · ${t('page.perQuintal')}`}/><StatCard label={t('page.predictedPeak')} value={formatPrice(data.forecast?.predictedPeak)} note={t('page.expectedSevenDays')} accent="amber"/><StatCard label={t('page.verifiedBuyerOffer')} value={formatPrice(data.recommendation?.recommendedBuyer?.offerPrice)} note={`${data.recommendation?.recommendedBuyer?.name || t('page.noBuyer')} · ${t('page.perQuintal')}`} accent="blue"/><StatCard label={t('page.bestNetPrice')} value={formatPrice(data.recommendation?.expectedNetPrice)} note={t('page.afterLogistics')} accent="purple"/></section>
@@ -282,6 +327,8 @@ export default function App() {
       {transactions.map((transaction) => <section className="transaction-card" key={transaction.id}><div className="transaction-status"><CheckCircle2 size={13}/> {t('page.payment')}</div><div><strong>{transaction.crop || t('page.cropLot')} · {formatPrice(transaction.amount)}</strong><p>{transaction.buyerName || t('page.verifiedBuyer')} · {transaction.quantity || '—'} q</p><small className="payment-detail">{transaction.pickupWindow || transaction.logisticsProvider || t('page.logisticsOptions')} · {transaction.driverName || t('page.pickup')}</small><small className="payment-detail">{transaction.paymentMethod || t('page.payment')} · Ref: {transaction.paymentReference || '—'} · {transaction.paymentDue || '—'}</small><div className="transaction-steps"><span className={['pickup_scheduled', 'in_transit', 'delivered', 'completed'].includes(transaction.status) ? 'done' : ''}>1. {t('page.pickup')}</span><span className={['in_transit', 'delivered', 'completed'].includes(transaction.status) ? 'done' : ''}>2. {t('page.transit')}</span><span className={['delivered', 'completed'].includes(transaction.status) ? 'done' : ''}>3. {t('page.delivery')}</span><span className={transaction.paymentStatus === 'paid' ? 'done' : ''}>4. {t('page.payment')}</span></div></div><div className="offer-actions">{transaction.status !== 'completed' && <button className="primary-button" onClick={() => moveTransaction(transaction)}><Clock3 size={16}/> {t('page.nextStep')}</button>}{['delivered', 'completed'].includes(transaction.status) && transaction.paymentStatus !== 'paid' && <button className="outline-button" onClick={() => confirmPayment(transaction)}>{t('page.confirmPayment')}</button>}<button className="quiet-button" onClick={() => downloadReceipt(transaction)}>{t('page.downloadReceipt')}</button></div></section>)}
       {!offers.some((offer) => offer.status === 'pending') && !transactions.length && <section className="empty-state"><CheckCircle2 size={21}/><div><strong>{t('page.noOffers')}</strong><p>{t('page.noOffersDescription')}</p></div></section>}
       <section className="support-card"><MessageSquareWarning size={22}/><div><p className="eyebrow">{t('page.needHelp')}</p><h3>{t('page.raiseGrievance')}</h3><p>{t('page.reportIssue')}</p></div><form onSubmit={submitGrievance}><input value={grievanceText} onChange={(event) => setGrievanceText(event.target.value)} aria-label={t('page.describeConcern')} placeholder={t('page.describeConcern')}/><button className="outline-button">{t('page.submit')}</button></form></section>
+      </div>
+      <SiteFooter onNavigate={navigateTo}/>
     </main>
     {showLotForm && <LotModal crop={filters.crop} markets={currentPrices} onClose={() => setShowLotForm(false)} onSave={createLot}/>}
     <KisanAssistant
