@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { buyers, grievances, logisticsOptions, resetDemoData, transactions } from '../data/sampleData.js';
 import { requireRole } from '../middleware/auth.js';
 import { calculateLogisticsQuote, calculateNetPayable, DEFAULT_TRANSACTION_STORAGE_DAYS } from '../services/logisticsService.js';
+import { isMongooseConfigured } from '../db/mongoose.js';
+import { resetEquipmentDemoData } from '../repositories/equipmentRepository.js';
 
 const router = Router();
 router.get('/logistics', (req, res) => res.json(logisticsOptions));
@@ -60,5 +62,23 @@ router.post('/grievances', (req, res) => {
   grievances.push(item);
   res.status(201).json(item);
 });
-router.post('/demo/reset', (req, res) => { resetDemoData(); res.json({ message: 'Demo data reset.' }); });
+router.post('/demo/reset', async (req, res) => {
+  resetDemoData();
+  let equipmentReset = false;
+  if (isMongooseConfigured()) {
+    try {
+      await resetEquipmentDemoData();
+      equipmentReset = true;
+    } catch (error) {
+      console.warn('Equipment demo reset failed:', error?.name || 'Error');
+      return res.status(503).json({
+        error: {
+          code: 'DEMO_RESET_PARTIAL',
+          message: 'Core demo data was reset, but equipment sharing could not be reset. Please try again.'
+        }
+      });
+    }
+  }
+  return res.json({ message: 'Demo data reset.', equipmentReset });
+});
 export default router;

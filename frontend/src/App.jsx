@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Bell, Boxes, CircleDollarSign, Leaf, MapPin, Menu, PackagePlus, ShieldCheck, Sparkles, TrendingUp, Truck, Users, CheckCircle2, Clock3, MessageSquareWarning, Trash2 } from 'lucide-react';
+import { ArrowRight, Bell, Boxes, CircleDollarSign, Leaf, MapPin, Menu, PackagePlus, ShieldCheck, Sparkles, TrendingUp, Truck, Users, CheckCircle2, Clock3, MessageSquareWarning, Trash2, Wrench } from 'lucide-react';
 import { api } from './services/api';
 import StatCard from './components/StatCard';
 import TrendChart from './components/TrendChart';
 import LotModal from './components/LotModal';
 import KisanAssistant from './components/KisanAssistant';
 import PochitaFollower from './components/PochitaFollower';
+import EquipmentMarketplace from './components/EquipmentMarketplace.jsx';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGE_OPTIONS } from './i18n';
 import { canUseSharedLogistics, sharedLogisticsStatusKey } from './services/sharedLogistics.js';
@@ -31,6 +32,22 @@ const hasNumber = (value) => value !== null && value !== undefined && value !== 
 const firstNumber = (...values) => values.find(hasNumber);
 function formatPrice(value) { return hasNumber(value) ? `₹${Number(value).toLocaleString('en-IN')}` : '—'; }
 const MAX_LOT_QUANTITY = 5000;
+
+const EQUIPMENT_DEMO_USERS = [
+  { id: 'farmer-1', name: 'Sanjay Patil', location: 'Nashik' },
+  { id: 'farmer-2', name: 'Mahesh Jadhav', location: 'Nashik' },
+  { id: 'farmer-3', name: 'Asha More', location: 'Nashik' },
+  { id: 'farmer-4', name: 'Ramesh Shinde', location: 'Pune' }
+];
+const EQUIPMENT_DEMO_USER_STORAGE_KEY = 'kisansetu-equipment-demo-user';
+function initialEquipmentDemoUser() {
+  if (typeof window === 'undefined') return 'farmer-1';
+  const saved = window.localStorage.getItem(EQUIPMENT_DEMO_USER_STORAGE_KEY);
+  return EQUIPMENT_DEMO_USERS.some((user) => user.id === saved) ? saved : 'farmer-1';
+}
+function profileInitials(name) {
+  return String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'SP';
+}
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -60,6 +77,8 @@ export default function App() {
   const [kittyEnabled, setKittyEnabled] = useState(false);
   const [sharedLogisticsByLot, setSharedLogisticsByLot] = useState({});
   const [sharedLogisticsLoading, setSharedLogisticsLoading] = useState('');
+  const [equipmentDemoUserId, setEquipmentDemoUserId] = useState(initialEquipmentDemoUser);
+  const [equipmentResetVersion, setEquipmentResetVersion] = useState(0);
 
   const loadDashboard = async () => {
     const quantity = Number(filters.quantity);
@@ -139,6 +158,9 @@ export default function App() {
       await refreshWorkflow();
       setSelectedService(null);
       setSharedLogisticsByLot({});
+      setEquipmentDemoUserId('farmer-1');
+      window.localStorage.setItem(EQUIPMENT_DEMO_USER_STORAGE_KEY, 'farmer-1');
+      setEquipmentResetVersion((current) => current + 1);
       notify('alerts.resetDone', 'alerts.resetTitle');
     } catch {
       showNotice('alerts.resetFailed');
@@ -173,7 +195,7 @@ export default function App() {
 
   const navigateTo = (item) => {
     setActiveNav(item);
-    const targetId = { Dashboard: 'dashboard', 'Market prices': 'market-prices', 'My crop lots': 'crop-lots', 'Buyer matches': 'buyer-matches', Logistics: 'logistics', Transactions: 'transactions' }[item];
+    const targetId = { Dashboard: 'dashboard', 'Market prices': 'market-prices', 'My crop lots': 'crop-lots', 'Buyer matches': 'buyer-matches', Logistics: 'logistics', 'Equipment sharing': 'equipment-sharing', Transactions: 'transactions' }[item];
     document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -188,10 +210,25 @@ export default function App() {
   const estimatedPayout = firstNumber(data.recommendation?.estimatedPayout, data.recommendation?.estimatedNetAmount, data.recommendation?.netPayable);
   const pendingOfferCount = offers.filter((offer) => offer.status === 'pending').length;
   const cropLabel = (crop) => t(`crops.${String(crop || '').toLowerCase()}`, { defaultValue: crop });
-  const navItems = [{ label: 'Dashboard', text: t('nav.dashboard'), icon: Boxes }, { label: 'Market prices', text: t('nav.markets'), icon: TrendingUp }, { label: 'My crop lots', text: t('nav.lots'), icon: PackagePlus }, { label: 'Buyer matches', text: t('nav.buyers'), icon: Users }, { label: 'Logistics', text: t('nav.logistics'), icon: Truck }, { label: 'Transactions', text: t('nav.transactions'), icon: CircleDollarSign }];
+  const navItems = [{ label: 'Dashboard', text: t('nav.dashboard'), icon: Boxes }, { label: 'Market prices', text: t('nav.markets'), icon: TrendingUp }, { label: 'My crop lots', text: t('nav.lots'), icon: PackagePlus }, { label: 'Buyer matches', text: t('nav.buyers'), icon: Users }, { label: 'Logistics', text: t('nav.logistics'), icon: Truck }, { label: 'Equipment sharing', text: t('nav.equipment'), icon: Wrench }, { label: 'Transactions', text: t('nav.transactions'), icon: CircleDollarSign }];
+  const equipmentDemoUser = EQUIPMENT_DEMO_USERS.find((user) => user.id === equipmentDemoUserId) || EQUIPMENT_DEMO_USERS[0];
+  const changeEquipmentDemoUser = (nextUserId) => {
+    if (!EQUIPMENT_DEMO_USERS.some((user) => user.id === nextUserId)) return;
+    setEquipmentDemoUserId(nextUserId);
+    window.localStorage.setItem(EQUIPMENT_DEMO_USER_STORAGE_KEY, nextUserId);
+  };
+  const demoAccountFooter = <div className="sidebar-footer sidebar-account-switcher">
+    <div className="profile-avatar">{profileInitials(equipmentDemoUser.name)}</div>
+    <div className="sidebar-account-copy">
+      <select className="sidebar-account-select" value={equipmentDemoUserId} onChange={(event) => changeEquipmentDemoUser(event.target.value)} aria-label={t('equipment.switchUser')} title={t('equipment.switchUser')}>
+        {EQUIPMENT_DEMO_USERS.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
+      </select>
+      <small>{t('page.farmer')} · {equipmentDemoUser.location}</small>
+    </div>
+  </div>;
   return <div className="app-shell">
-    <aside className="sidebar"><div className="brand"><span className="brand-mark"><Leaf size={23}/></span><div><strong>KisanSetu</strong><small>{t('brandSubtitle')}</small></div></div><nav>{navItems.map(({ label, text, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} onClick={() => navigateTo(label)}><Icon size={19}/>{text}</button>)}</nav><div className="sidebar-footer"><div className="profile-avatar">SP</div><div><strong>Sanjay Patil</strong><small>{t('page.farmer')} · Nashik</small></div></div></aside>
-    {mobileNavOpen && <div className="mobile-nav-layer"><button className="mobile-nav-backdrop" aria-label={t('page.close')} onClick={() => setMobileNavOpen(false)}/><aside className="mobile-nav" aria-label={t('nav.dashboard')}><div className="mobile-nav-head"><div className="brand"><span className="brand-mark"><Leaf size={21}/></span><div><strong>KisanSetu</strong><small>{t('brandSubtitle')}</small></div></div><button type="button" className="icon-button" aria-label={t('page.close')} onClick={() => setMobileNavOpen(false)}>×</button></div><nav>{navItems.map(({ label, text, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} onClick={() => { navigateTo(label); setMobileNavOpen(false); }}><Icon size={19}/>{text}</button>)}</nav><div className="sidebar-footer"><div className="profile-avatar">SP</div><div><strong>Sanjay Patil</strong><small>{t('page.farmer')} · Nashik</small></div></div></aside></div>}
+    <aside className="sidebar"><div className="brand"><span className="brand-mark"><Leaf size={23}/></span><div><strong>KisanSetu</strong><small>{t('brandSubtitle')}</small></div></div><nav>{navItems.map(({ label, text, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} onClick={() => navigateTo(label)}><Icon size={19}/>{text}</button>)}</nav>{demoAccountFooter}</aside>
+    {mobileNavOpen && <div className="mobile-nav-layer"><button className="mobile-nav-backdrop" aria-label={t('page.close')} onClick={() => setMobileNavOpen(false)}/><aside className="mobile-nav" aria-label={t('nav.dashboard')}><div className="mobile-nav-head"><div className="brand"><span className="brand-mark"><Leaf size={21}/></span><div><strong>KisanSetu</strong><small>{t('brandSubtitle')}</small></div></div><button type="button" className="icon-button" aria-label={t('page.close')} onClick={() => setMobileNavOpen(false)}>×</button></div><nav>{navItems.map(({ label, text, icon: Icon }) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} onClick={() => { navigateTo(label); setMobileNavOpen(false); }}><Icon size={19}/>{text}</button>)}</nav>{demoAccountFooter}</aside></div>}
     <main id="dashboard"><header className="topbar"><button className="mobile-menu" aria-label={t('nav.dashboard')} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(true)}><Menu/></button><div><p className="eyebrow">{t('greeting')} <span className="demo-chip">{t('page.demoData')}</span></p><h1>{t('headline')}</h1></div><div className="top-actions"><select className="language-select" value={i18n.language} onChange={(event) => i18n.changeLanguage(event.target.value)} aria-label={t('page.language')}>{LANGUAGE_OPTIONS.map((language) => <option key={language.code} value={language.code}>{language.label}</option>)}</select><button className="farmer-mode-button" onClick={() => setFarmerMode(!farmerMode)}>{farmerMode ? t('page.standardText') : t('page.farmerMode')}</button><div className="notification-wrap"><button className="notification" aria-label={`${notifications.length} ${t('page.notifications')}`} aria-expanded={showNotifications} onClick={() => setShowNotifications(!showNotifications)}><Bell size={20}/>{notifications.length > 0 && <i/>}</button>{showNotifications && <div className="notification-panel" role="status"><div className="notification-panel-head"><div><strong>{t('page.notifications')}</strong><small>{t('page.recentUpdates', { count: notifications.length })}</small></div><button type="button" aria-label={t('page.closeNotifications')} onClick={() => setShowNotifications(false)}>×</button></div><div className="notification-list">{notifications.map((item) => <div className="notification-item" key={item.id}><span className="notification-dot"/><div><strong>{t(item.titleKey, item.params)}</strong><p>{t(item.detailKey, item.params)}</p></div></div>)}</div><button className="notification-review" type="button" onClick={() => { setShowNotifications(false); navigateTo('Transactions'); }}>{t('page.reviewOffers')} <ArrowRight size={14}/></button></div>}</div><button className="help-button" onClick={resetDemo}>{t('reset')}</button></div></header>
       <section className="hero-card"><div><p className="eyebrow">{t('heroEyebrow')}</p><h2>{t('heroTitle')}</h2><p>{t('heroBody')}</p><button className="light-button" onClick={() => setShowLotForm(true)}>{t('createLot')} <ArrowRight size={18}/></button></div><div className="hero-art"><div className="sun"/><div className="hill hill-one"/><div className="hill hill-two"/><span>🌾</span></div></section>
       <section className="search-panel"><div className="search-title"><Sparkles size={20}/><span>{t('opportunity')}</span></div><label>{t('crop')}<select value={filters.crop} onChange={(event) => setFilters({ ...filters, crop: event.target.value })}><option value="Onion">{t('crops.onion')}</option><option value="Tomato">{t('crops.tomato')}</option><option value="Soybean">{t('crops.soybean')}</option></select></label><label>{t('location')}<input value={filters.location} onChange={(event) => setFilters({ ...filters, location: event.target.value })}/></label><label>{t('quantity')}<input type="number" value={filters.quantity} onChange={(event) => setFilters({ ...filters, quantity: event.target.value })}/></label><button className="primary-button" onClick={loadDashboard}>{loading ? t('checking') : t('checkPrices')}</button></section>
@@ -238,6 +275,7 @@ export default function App() {
       <section id="logistics" className="section-header"><div><p className="eyebrow">{t('page.moveStore')}</p><h2>{t('page.logisticsOptions')}</h2></div></section>
       <section className="service-grid">{(logistics.length ? logistics : [{ id: 'transport', provider: 'Kisan Haul', type: 'Transport', capacity: 150 }, { id: 'storage', provider: 'Nashik Cold Store', type: 'Storage', ratePerDay: 18 }]).map((service) => <article className="service-card" key={service.id}><Truck size={23}/><div><strong>{service.provider}</strong><p>{service.type === 'Storage' ? t('page.storage') : t('page.transport')} · {service.capacity ? `${t('page.capacity')} ${service.capacity} ${t('page.quintals')}` : `₹${service.ratePerDay} ${t('page.perDay')}`}</p></div><button className="outline-button" onClick={() => selectLogistics(service)}>{selectedService?.id === service.id ? t('page.selected') : t('page.select')}</button></article>)}</section>
       {selectedService && <div className="logistics-confirmation" role="status"><Truck size={16}/><span>{t('page.selectedConfirmation', { provider: selectedService.provider })}</span></div>}
+      <EquipmentMarketplace demoUserId={equipmentDemoUserId} resetVersion={equipmentResetVersion}/>
       <section id="transactions" className="section-header"><div><p className="eyebrow">{t('page.orderStatus')}</p><h2>{t('page.transactions')}</h2></div></section>
       {offers.filter((offer) => offer.status === 'pending').map((offer) => <section className="transaction-card" key={offer.id}><div className="transaction-status">{t('page.demoBuyerOffer')}</div><div><strong>{t('page.cropLot')} · {offer.quantity} {t('page.quintals')}</strong><p>{t('page.buyerOffer')}: {formatPrice(offer.pricePerUnit)} {t('page.perQuintal')} · {t('page.pickupAvailable')}</p>{counteringOffer === offer.id && <div className="counter-row"><input aria-label={t('page.counter')} type="number" min="1" placeholder="₹/q" value={counterPrice} onChange={(event) => setCounterPrice(event.target.value)}/><button className="outline-button" onClick={() => respondToOffer(offer.id, 'countered')}>{t('page.sendCounter')}</button></div>}</div><div className="offer-actions"><button className="outline-button" onClick={() => setCounteringOffer(counteringOffer === offer.id ? '' : offer.id)}>{t('page.counter')}</button><button className="outline-button" onClick={() => respondToOffer(offer.id, 'rejected')}>{t('page.decline')}</button><button className="primary-button" onClick={() => acceptOffer(offer.id)}>{t('page.acceptOffer')}</button></div></section>)}
       {offers.filter((offer) => offer.status === 'countered').map((offer) => <section className="transaction-card" key={offer.id}><div className="transaction-status">{t('page.counterSent')}</div><div><strong>{t('page.counter')}: {formatPrice(offer.counterPrice)}/q</strong><p>{offer.counterMessage}</p></div></section>)}
@@ -247,7 +285,7 @@ export default function App() {
     </main>
     {showLotForm && <LotModal crop={filters.crop} markets={currentPrices} onClose={() => setShowLotForm(false)} onSave={createLot}/>}
     <KisanAssistant
-      context={{ filters, data, lots, offers, transactions, logistics, selectedService }}
+      context={{ filters, data, lots, offers, transactions, logistics, selectedService, equipmentDemoUserId, equipmentDemoUserName: equipmentDemoUser.name, resetVersion: equipmentResetVersion }}
       kittyEnabled={kittyEnabled}
       onKittyCommand={(command) => setKittyEnabled(command === 'on')}
       onAction={(key) => {
@@ -265,6 +303,10 @@ export default function App() {
         }
         if (key === 'logistics') {
           navigateTo('Logistics');
+          return;
+        }
+        if (key === 'equipment') {
+          navigateTo('Equipment sharing');
           return;
         }
         document.querySelector('.recommendation')?.scrollIntoView({ behavior: 'smooth', block: 'center' });

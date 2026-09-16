@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import pageTranslations from './localization/pageTranslations.js';
+import equipmentTranslations from './localization/equipmentTranslations.js';
 
 export const LANGUAGE_OPTIONS = [
   { code: 'en', locale: 'en-IN', label: 'English' },
@@ -191,7 +192,7 @@ for (const [language, page] of Object.entries(pageTranslations)) {
     offerDeclinedTitle: 'Offer declined', offerDeclined: 'Offer declined. You can continue comparing verified buyers.', counterTitle: 'Counter-offer sent', counterSent: 'Your counter-offer has been sent to the verified buyer.', offerUpdateFailed: 'Could not update this offer.',
     logisticsRequired: 'Please choose a logistics option before scheduling pickup.', transactionTitle: 'Transaction updated', transactionUpdated: 'Transaction moved to {{status}}.', transactionFailed: 'Could not update transaction status.',
     paymentTitle: 'Payment received', paymentReceived: 'Payment of {{amount}} marked received.', paymentFailed: 'Could not update payment status.', logisticsInvalid: 'Choose a valid logistics option.', logisticsTitle: 'Logistics selected', logisticsUpdated: '{{provider}} selected and the transaction estimate was updated.', logisticsFuture: '{{provider}} selected and will be included after offer acceptance.', logisticsFailed: 'Could not select this logistics option.',
-    grievanceRaised: 'Grievance raised successfully. Support will review it.', grievanceFailed: 'Could not raise grievance.', resetTitle: 'Demo reset', resetDone: 'Demo data reset. The pending buyer offer is ready again.', resetFailed: 'Could not reset demo data.', marketsShown: 'Showing all available {{crop}} markets.', marketsFailed: 'Could not load all markets.',
+    grievanceRaised: 'Grievance raised successfully. Support will review it.', grievanceFailed: 'Could not raise grievance.', resetTitle: 'Demo reset', resetDone: 'Demo data reset. Crop workflow and equipment sharing are back to the starting state.', resetFailed: 'Could not reset demo data.', marketsShown: 'Showing all available {{crop}} markets.', marketsFailed: 'Could not load all markets.',
     lotClosedTitle: 'Crop lot closed', lotClosed: 'Crop lot closed and will no longer receive offers.', lotCloseFailed: 'Could not close this crop lot.', lotDeletedTitle: 'Crop lot deleted', lotDeleted: 'Crop lot and pending offers were deleted.', lotDeleteFailed: 'Could not delete this crop lot.', receiptTitle: 'Receipt downloaded', receiptDownloaded: 'Receipt downloaded.'
   } : {
     updateTitle: 'KisanSetu', buyerReadyTitle: page.verifiedBuyerOffer, buyerReadyDetail: `${page.reviewOffers} · ${page.acceptOffer} · ${page.decline} · ${page.counter}`,
@@ -234,6 +235,16 @@ for (const [language, resource] of Object.entries(resources)) {
     if (!assistant[key] || assistant[key] === en.assistant[key]) assistant[key] = value;
   }
   assistant.suggestions = [page.sellNow, page.priceTrend, page.nearbyPrices, assistant.photo];
+}
+
+
+for (const [language, resource] of Object.entries(resources)) {
+  const equipment = equipmentTranslations[language] || equipmentTranslations.en;
+  resource.translation.equipment = equipment;
+  resource.translation.nav = { ...resource.translation.nav, equipment: equipment.nav };
+  if (equipment.assistantIntroAddon && !resource.translation.assistant.intro.includes(equipment.assistantIntroAddon)) {
+    resource.translation.assistant.intro = `${resource.translation.assistant.intro} ${equipment.assistantIntroAddon}`;
+  }
 }
 
 const savedLanguage = localStorage.getItem('kisansetu-language');

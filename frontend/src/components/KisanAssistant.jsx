@@ -35,6 +35,11 @@ const INTENT_RULES = [
     keywords: [['buyer', 6], ['offer', 6], ['match', 5], ['negotiate', 5], ['counter', 4]]
   },
   {
+    id: 'equipment',
+    phrases: [['equipment sharing', 18], ['rent equipment', 17], ['rent tractor', 17], ['farm machinery', 16], ['rental activity', 16], ['rental request', 15], ['list equipment', 15], ['approve rental', 15], ['reject rental', 15], ['agricultural machinery', 14]],
+    keywords: [['equipment', 8], ['tractor', 8], ['machinery', 7], ['machine', 6], ['rotavator', 8], ['harvester', 8], ['sprayer', 7], ['seeder', 7], ['thresher', 7], ['cultivator', 7], ['rental', 5], ['rent', 4]]
+  },
+  {
     id: 'logistics',
     phrases: [['choose logistics', 14], ['select logistics', 14], ['transport cost', 13], ['cold storage', 13], ['schedule pickup', 12]],
     keywords: [['transport', 6], ['logistics', 6], ['pickup', 5], ['storage', 5], ['driver', 4], ['haul', 4]]
@@ -124,11 +129,13 @@ function getFacts(context) {
     activeTransaction,
     selectedService: context?.selectedService || null,
     logistics: Array.isArray(context?.logistics) ? context.logistics : [],
-    lots: Array.isArray(context?.lots) ? context.lots : []
+    lots: Array.isArray(context?.lots) ? context.lots : [],
+    equipmentSnapshot: context?.equipmentSnapshot || null,
+    equipmentDemoUserName: context?.equipmentDemoUserName || ''
   };
 }
 
-function localizedResponse(intent, context, t) {
+function localizedResponse(intent, context, t, question = '', followUp = null) {
   const facts = getFacts(context);
   const recommendation = facts.recommendation;
   const expectedNet = formatPerQuintal(recommendation.expectedNetPrice);
@@ -136,9 +143,11 @@ function localizedResponse(intent, context, t) {
   const market = facts.bestMarketOption || facts.highestDisplayedMarket;
   const transaction = facts.activeTransaction;
   const selected = facts.selectedService || (transaction?.logisticsProvider ? { provider: transaction.logisticsProvider } : null);
+  const query = normalise(question);
   const actions = {
     recommendation: [t('page.whyRecommendation'), 'recommendation'], market: [t('page.viewAllPrices'), 'market'],
     buyer: [t('page.reviewOffers'), 'offers'], logistics: [t('page.logisticsOptions'), 'logistics'],
+    equipment: [t('equipment.openMarketplace'), 'equipment'],
     payment: [t('page.transactions'), 'transactions'], earnings: [t('page.whyRecommendation'), 'recommendation'],
     lot: [t('page.createALot'), 'create-lot'], help: [t('page.whyRecommendation'), 'recommendation']
   };
@@ -159,6 +168,40 @@ function localizedResponse(intent, context, t) {
     message: buyer ? `${buyer.name} · ${t('page.verifiedBuyerOffer')}: ${formatPerQuintal(buyer.offerPrice) || '—'} · ${t('page.matchScore')}: ${buyer.matchScore || '—'}%.` : t('page.noBuyer'),
     action, key
   };
+  if (intent === 'equipment') {
+    const snapshot = facts.equipmentSnapshot || {};
+    if (snapshot.unavailable) {
+      return { intent, title: t('equipment.assistantTitle'), message: t('equipment.unavailable'), action, key };
+    }
+    const items = Array.isArray(snapshot.items) ? snapshot.items : [];
+    const rentals = Array.isArray(snapshot.rentals) ? snapshot.rentals : [];
+    const incomingRequested = rentals.filter((rental) => rental.role === 'owner' && rental.status === 'requested');
+    const outgoing = rentals.filter((rental) => rental.role === 'renter');
+    const approved = rentals.filter((rental) => rental.status === 'approved');
+    const specificType = ['tractor', 'rotavator', 'harvester', 'seeder', 'sprayer', 'thresher', 'cultivator']
+      .find((type) => query.includes(type));
+    const matchingItems = specificType
+      ? items.filter((item) => `${item.type || ''} ${item.name || ''}`.toLowerCase().includes(specificType))
+      : items;
+    const availableSummary = matchingItems.slice(0, 3).map((item) => `${item.name} (${formatPrice(item.dailyRate) || '—'}${t('equipment.perDay')})`).join(' · ');
+    const wantsApproval = /approve|reject|owner|incoming|accept request/.test(query);
+    const wantsListing = /list|publish|add|my equipment|offer equipment/.test(query);
+    const wantsStatus = /status|activity|pending|approved|cancelled|completed|my request|request status/.test(query);
+    const wantsRenting = /rent|hire|book|available|tractor|rotavator|harvester|seeder|sprayer|thresher|cultivator/.test(query);
+    let message;
+    if (wantsApproval) {
+      message = `${t('equipment.assistantApprovalHelp')} ${t('equipment.assistantStatusSummary', { incoming: incomingRequested.length, outgoing: outgoing.length, approved: approved.length })}`;
+    } else if (wantsListing) {
+      message = t('equipment.assistantListHelp');
+    } else if (wantsStatus) {
+      message = `${t('equipment.assistantCurrentUser', { name: facts.equipmentDemoUserName || t('page.farmer') })} ${t('equipment.assistantStatusSummary', { incoming: incomingRequested.length, outgoing: outgoing.length, approved: approved.length })}`;
+    } else if (wantsRenting) {
+      message = `${t('equipment.assistantRentHelp')} ${availableSummary ? t('equipment.assistantAvailable', { items: availableSummary }) : t('equipment.assistantNoAvailable')}`;
+    } else {
+      message = `${t('equipment.assistantOverview')} ${availableSummary ? t('equipment.assistantAvailable', { items: availableSummary }) : ''}`.trim();
+    }
+    return { intent, title: t('equipment.assistantTitle'), message, action, key };
+  }
   if (intent === 'logistics') return {
     intent, title: t('page.logisticsOptions'),
     message: selected ? t('page.selectedConfirmation', { provider: selected.provider }) : `${facts.logistics.map((item) => item.provider).join(' · ') || t('page.notSpecified')}. ${t('page.select')}.`,
@@ -179,7 +222,7 @@ function localizedResponse(intent, context, t) {
 }
 
 function response(intent, context, followUp, question = '', t) {
-  if (t) return localizedResponse(intent, context, t);
+  if (t) return localizedResponse(intent, context, t, question, followUp);
   const facts = getFacts(context);
   const query = normalise(question);
   const cropDescription = [facts.filters.crop, hasNumber(facts.filters.quantity) ? `${facts.filters.quantity} q` : null].filter(Boolean).join(' · ');
@@ -383,6 +426,12 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
     stopSpeech();
     setSpeakingMessage(null);
   }, [i18n.language]);
+  useEffect(() => {
+    if (!context?.resetVersion) return;
+    setMessages([]);
+    setLastIntent('');
+    setInput('');
+  }, [context?.resetVersion]);
 
   const messageForCurrentLanguage = (message) => {
     if (message.source === 'price' && message.priceResult) {
@@ -395,7 +444,8 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
       };
     }
     if (message.intent && message.intent !== 'disease') {
-      return localizedResponse(message.intent, context, t);
+      const localizedContext = message.equipmentSnapshot ? { ...context, equipmentSnapshot: message.equipmentSnapshot, equipmentDemoUserName: message.equipmentSnapshot.demoUserName || context?.equipmentDemoUserName } : context;
+      return localizedResponse(message.intent, localizedContext, t, message.question || '', message.followUp || null);
     }
     return message;
   };
@@ -437,7 +487,27 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
       return;
     }
     const resolved = forcedIntent ? { id: forcedIntent === 'price' ? 'recommendation' : forcedIntent, followUp: null } : resolveIntent(clean, lastIntent, context);
-    let nextMessage = { ...response(resolved.id, context, resolved.followUp, clean, t), source: 'intent', followUp: resolved.followUp };
+    let responseContext = context;
+    let equipmentSnapshot = null;
+    if (resolved.id === 'equipment') {
+      try {
+        const [equipmentResult, rentalResult] = await Promise.all([
+          api.getEquipment({}, context?.equipmentDemoUserId || 'farmer-1'),
+          api.getEquipmentRentals(context?.equipmentDemoUserId || 'farmer-1')
+        ]);
+        equipmentSnapshot = { items: equipmentResult.items || [], rentals: rentalResult.rentals || [], demoUserId: context?.equipmentDemoUserId || 'farmer-1', demoUserName: context?.equipmentDemoUserName || '' };
+      } catch {
+        equipmentSnapshot = { items: [], rentals: [], unavailable: true, demoUserId: context?.equipmentDemoUserId || 'farmer-1', demoUserName: context?.equipmentDemoUserName || '' };
+      }
+      responseContext = { ...context, equipmentSnapshot };
+    }
+    let nextMessage = {
+      ...response(resolved.id, responseContext, resolved.followUp, clean, t),
+      source: 'intent',
+      followUp: resolved.followUp,
+      question: clean,
+      ...(equipmentSnapshot ? { equipmentSnapshot } : {})
+    };
     if (forcedIntent === 'price' || /predict|forecast|future price|price prediction/i.test(clean)) {
       try {
         const result = await api.getAdvisorPrice(context?.filters?.crop || 'Onion', 7);

@@ -1,5 +1,8 @@
 export const users = [
   { id: 'farmer-1', name: 'Sanjay Patil', phone: '9876543210', role: 'farmer', location: { district: 'Nashik', state: 'Maharashtra' } },
+  { id: 'farmer-2', name: 'Mahesh Jadhav', phone: '9000000002', role: 'farmer', location: { district: 'Nashik', state: 'Maharashtra' } },
+  { id: 'farmer-3', name: 'Asha More', phone: '9000000003', role: 'farmer', location: { district: 'Nashik', state: 'Maharashtra' } },
+  { id: 'farmer-4', name: 'Ramesh Shinde', phone: '9000000004', role: 'farmer', location: { district: 'Pune', state: 'Maharashtra' } },
   { id: 'buyer-1', name: 'FreshMart Foods', role: 'buyer', location: { district: 'Pune', state: 'Maharashtra' } }
 ];
 

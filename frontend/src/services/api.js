@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000/api';
 
 async function request(path, options = {}) {
   const isFormData = options.body instanceof FormData;
@@ -31,6 +31,13 @@ async function requestAudio(path, options = {}) {
   return audio;
 }
 
+function equipmentHeaders(demoUserId = 'farmer-1', includeRole = false) {
+  return {
+    'x-demo-user-id': demoUserId,
+    ...(includeRole ? { 'x-demo-role': 'farmer' } : {})
+  };
+}
+
 export const api = {
   getPrices: (crop, district, quantity) => request(`/markets/prices?crop=${encodeURIComponent(crop)}${district ? `&district=${encodeURIComponent(district)}` : ''}${quantity !== undefined && quantity !== '' ? `&quantity=${encodeURIComponent(quantity)}` : ''}`),
   getTrend: (crop) => request(`/markets/trends?crop=${encodeURIComponent(crop)}`),
@@ -52,6 +59,17 @@ export const api = {
   updateLot: (id, changes) => request(`/lots/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify(changes) }),
   deleteLot: (id) => request(`/lots/${id}`, { method: 'DELETE', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' } }),
   getSharedLogistics: (id, radiusKm = 15) => request(`/lots/${encodeURIComponent(id)}/shared-logistics?radiusKm=${encodeURIComponent(radiusKm)}`),
+
+  getEquipment: (filters = {}, demoUserId = 'farmer-1') => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== null && value !== '') params.set(key, value);
+    return request(`/equipment${params.toString() ? `?${params.toString()}` : ''}`, { headers: equipmentHeaders(demoUserId) });
+  },
+  createEquipment: (equipment, demoUserId = 'farmer-1') => request('/equipment', { method: 'POST', headers: equipmentHeaders(demoUserId, true), body: JSON.stringify(equipment) }),
+  deleteEquipment: (id, demoUserId = 'farmer-1') => request(`/equipment/${encodeURIComponent(id)}`, { method: 'DELETE', headers: equipmentHeaders(demoUserId, true) }),
+  rentEquipment: (id, rental, demoUserId = 'farmer-1') => request(`/equipment/${encodeURIComponent(id)}/rent`, { method: 'POST', headers: equipmentHeaders(demoUserId, true), body: JSON.stringify(rental) }),
+  getEquipmentRentals: (demoUserId = 'farmer-1') => request('/equipment/rentals/mine', { headers: equipmentHeaders(demoUserId, true) }),
+  updateEquipmentRental: (id, status, demoUserId = 'farmer-1') => request(`/equipment/rentals/${encodeURIComponent(id)}/status`, { method: 'PATCH', headers: equipmentHeaders(demoUserId, true), body: JSON.stringify({ status }) }),
   acceptOffer: (id, logisticsOptionId) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status: 'accepted', logisticsOptionId }) }),
   respondToOffer: (id, status, counterPrice, message) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status, counterPrice, message }) }),
   updateTransaction: (id, status, paymentStatus) => request(`/transactions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(paymentStatus ? { paymentStatus } : {}) }) }),

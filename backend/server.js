@@ -11,6 +11,7 @@ import offerRoutes from './routes/offerRoutes.js';
 import supportRoutes from './routes/supportRoutes.js';
 import advisorRoutes from './routes/advisorRoutes.js';
 import ttsRoutes from './routes/ttsRoutes.js';
+import equipmentRoutes from './routes/equipmentRoutes.js';
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
@@ -26,6 +27,7 @@ app.use('/api/recommendations', matchRoutes);
 app.use('/api/advisor', advisorRoutes);
 app.use('/api/tts', ttsRoutes);
 app.use('/api/offers', offerRoutes);
+app.use('/api/equipment', equipmentRoutes);
 app.use('/api', supportRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
 app.use((error, req, res, next) => {

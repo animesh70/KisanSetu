@@ -205,3 +205,53 @@ SHARED_LOGISTICS_MAX_MATCHES=20
 Never expose `MONGODB_URI` through a `VITE_*` variable or frontend code. If MongoDB is missing or temporarily unavailable, normal lot creation and the rest of KisanSetu continue to work; only the shared-logistics endpoint returns a safe temporary-unavailable response.
 
 The seeded Niphad lot uses a clearly demo-only approximate pickup point near Niphad for UI/testing purposes. User-created pickup coordinates come from explicit browser geolocation permission.
+
+## P2P Equipment Sharing
+
+KisanSetu includes an optional MongoDB/Mongoose-backed farmer-to-farmer equipment marketplace. It reuses the private `MONGODB_URI` and `MONGODB_DB_NAME` already used by Shared Logistics, but stores equipment data in separate Mongoose collections:
+
+- `equipment_listings` — farmer machinery listings, pricing, condition, location, and availability windows.
+- `equipment_rentals` — rental requests and their requested/approved/rejected/cancelled/completed lifecycle.
+
+The rest of KisanSetu still starts without MongoDB. If MongoDB is unavailable, only `/api/equipment` returns a safe temporary-unavailable response.
+
+Install the additional backend dependency after pulling this feature:
+
+```powershell
+cd backend
+npm install mongoose@8.23.1
+```
+
+This also updates `backend/package-lock.json`; commit the updated lock file after installation.
+
+The feature uses the existing backend-only MongoDB settings:
+
+```text
+MONGODB_URI=your-private-mongodb-connection-string
+MONGODB_DB_NAME=kisansetu
+EQUIPMENT_DEMO_SEED_ENABLED=true
+```
+
+`EQUIPMENT_DEMO_SEED_ENABLED=true` inserts three demo listings only when the equipment collection is empty so the hackathon UI has machinery to browse immediately. Set it to `false` to disable demo seeding.
+
+### Equipment API
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/equipment` | List/filter active machinery by type, district, maximum daily rate, and requested date window. |
+| `POST /api/equipment` | Farmer/FPO publishes an equipment listing. |
+| `GET /api/equipment/:id` | Read one listing. |
+| `DELETE /api/equipment/:id` | Owner removes a listing when it has no active rental request. |
+| `POST /api/equipment/:id/rent` | Send a rental request for a date range. |
+| `GET /api/equipment/rentals/mine` | View rental activity for the demo farmer as renter and owner. |
+| `PATCH /api/equipment/rentals/:id/status` | Owner approves/rejects/completes; renter can cancel. |
+
+Availability filtering excludes listings with overlapping requested or approved rentals. Creating a request also performs a second conflict check so overlapping bookings cannot be created just by bypassing the frontend. Rental prices use a snapshot of the listing's daily rate at request time.
+
+The frontend adds **Equipment sharing** to the sidebar with responsive listing cards, filters, equipment-listing and rental modals, and rental request status controls. For the hackathon demo, the existing farmer profile card at the bottom of the sidebar doubles as the compact account switcher, so you can request equipment as one farmer and switch to the owner to approve or reject it without adding another bulky control inside the marketplace. The demo identities are `farmer-1` Sanjay Patil, `farmer-2` Mahesh Jadhav, `farmer-3` Asha More, and `farmer-4` Ramesh Shinde. The switcher changes only the identity used by `/api/equipment`; crop lots, offers and transaction demo identity remain unchanged.
+
+Rental activity keeps the status badge and owner actions together. Incoming requests use compact **Approve** and **Reject** controls so the action area stays aligned on desktop and stacks cleanly on small screens.
+
+**Reset demo** now clears `equipment_rentals`, removes user-created equipment listings, reseeds the three starter demo machines when equipment demo seeding is enabled, resets the equipment account to Sanjay, and refreshes the equipment marketplace. This keeps MongoDB-backed equipment data in sync with the rest of the resettable prototype.
+
+The KisanSetu Assistant also understands Equipment Sharing questions. It can explain how to list or rent machinery, how owners approve/reject requests, summarize the selected demo farmer's rental activity, and show currently available equipment from the live `/api/equipment` data. The assistant's general introduction mentions equipment sharing, and the equipment help text is localized with the same 12-language setup used elsewhere in KisanSetu.
