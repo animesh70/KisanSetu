@@ -24,8 +24,9 @@ export const buyers = [
   ,{ id: 'buyer-4', companyName: 'Deccan Oil Mills', contactName: 'Vikram Deshmukh', verified: true, reliabilityScore: 4.7, location: 'Akola', distanceKm: 310, crops: ['Soybean'], requiredGrade: 'A', requiredQuantity: 100, targetPrice: 4480, serviceArea: ['Akola', 'Nashik'] }
 ];
 
+// Demo-only approximate pickup point near Niphad; never treat it as a farmer's exact address.
 export const cropLots = [
-  { id: 'lot-1', farmerId: 'farmer-1', crop: 'Onion', variety: 'Red Onion', quantity: 100, unit: 'quintal', grade: 'A', askingPrice: 2600, location: 'Niphad, Nashik', harvestDate: '2026-09-01', status: 'open' }
+  { id: 'lot-1', farmerId: 'farmer-1', crop: 'Onion', variety: 'Red Onion', quantity: 100, unit: 'quintal', grade: 'A', askingPrice: 2600, location: 'Niphad, Nashik', pickupPoint: { type: 'Point', coordinates: [74.08, 20.08] }, destinationMandiId: 'mandi-lasalgaon-apmc-nashik-maharashtra', destinationMandiName: 'Lasalgaon APMC', destinationDistanceKm: 28, harvestDate: '2026-09-01', status: 'open' }
 ];
 
 export const offers = [

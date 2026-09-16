@@ -51,6 +51,7 @@ export const api = {
   createLot: (lot) => request('/lots', { method: 'POST', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify(lot) }),
   updateLot: (id, changes) => request(`/lots/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify(changes) }),
   deleteLot: (id) => request(`/lots/${id}`, { method: 'DELETE', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' } }),
+  getSharedLogistics: (id, radiusKm = 15) => request(`/lots/${encodeURIComponent(id)}/shared-logistics?radiusKm=${encodeURIComponent(radiusKm)}`),
   acceptOffer: (id, logisticsOptionId) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status: 'accepted', logisticsOptionId }) }),
   respondToOffer: (id, status, counterPrice, message) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status, counterPrice, message }) }),
   updateTransaction: (id, status, paymentStatus) => request(`/transactions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(paymentStatus ? { paymentStatus } : {}) }) }),

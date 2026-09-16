@@ -156,3 +156,21 @@ html[lang="ur"] .support-card form input { direction: rtl; text-align: left; }
   .assistant-tools button span { display: none; }
   .language-select { width: 96px; }
 }
+
+/* Shared Logistics */
+.pickup-coordinate-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px; border: 1px dashed #d7e3d9; border-radius: 9px; background: #f8fbf8; }
+.pickup-coordinate-row .geo-button { width: auto; }
+.pickup-coordinate-row small { flex: 1; min-width: 210px; color: #71857a; font-size: 10px; line-height: 1.45; }
+.geo-ready { color: #1d7144; font-size: 11px; font-weight: 750; }
+.lot-destination { display: flex; align-items: center; gap: 5px; color: #60786b; font-size: 10px; margin: -6px 0 10px; }
+.shared-freight-button { display: inline-flex; align-items: center; justify-content: center; }
+.shared-logistics-panel { margin-top: 12px; padding: 11px; border: 1px solid #dce7df; border-radius: 9px; background: #f8faf8; color: #60786b; font-size: 10px; }
+.shared-logistics-panel.is-saving { background: #f0f8f1; border-color: #cfe5d4; }
+.shared-logistics-head { display: flex; align-items: center; gap: 6px; color: #315c44; margin-bottom: 6px; }
+.shared-logistics-panel p { margin: 4px 0; line-height: 1.4; }
+.shared-logistics-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 9px; }
+.shared-logistics-metrics span { padding: 7px; border-radius: 7px; background: #fff; border: 1px solid #e1ebe3; }
+.shared-logistics-metrics small, .shared-logistics-metrics strong { display: block; }
+.shared-logistics-metrics small { color: #809288; font-size: 8px; text-transform: uppercase; letter-spacing: .03em; }
+.shared-logistics-metrics strong { color: #1d7144; font-size: 11px; margin-top: 3px; }
+@media (max-width: 700px) { .pickup-coordinate-row { align-items: stretch; }.pickup-coordinate-row .geo-button { width: 100%; }.shared-logistics-metrics { grid-template-columns: 1fr; } }

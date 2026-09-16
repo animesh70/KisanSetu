@@ -161,3 +161,47 @@ The backend calls `GET http://localhost:8000/predict?crop=Onion&days=7`. Respons
 7. Select a logistics option and advance the transaction through pickup, transit, and delivery.
 8. Confirm payment received and point out the payment reference and final paid status.
 9. Use **Reset demo** before the next presentation.
+
+## Shared Logistics geospatial matching
+
+Shared Logistics is an additive MongoDB-backed geospatial feature. Existing crop lots, offers, transactions, price forecasting, CropVision, Azure TTS, and browser STT keep their current behavior; MongoDB is used only as a spatial mirror for lots that have a pickup point and destination mandi.
+
+A geo-enabled lot stores its pickup position internally as GeoJSON:
+
+```json
+{
+  "type": "Point",
+  "coordinates": [74.08, 20.08]
+}
+```
+
+GeoJSON coordinates are always **`[longitude, latitude]`**. The browser only requests location after the farmer presses **Use current location**. Exact pickup coordinates are not returned by the public lot list or shared-logistics response.
+
+The backend mirrors eligible lots into the `lot_geo` collection and ensures these indexes:
+
+```js
+{ pickupPoint: "2dsphere" }
+{ destinationMandiId: 1, status: 1 }
+```
+
+`GET /api/lots/:id/shared-logistics?radiusKm=15` runs a MongoDB `$near` query for other **open** lots going to the **same destination mandi** within the configured radius. The default radius is 15 km (15,000 metres), and the result count is bounded. Crop type is intentionally not part of the query: two nearby farmers can potentially share a vehicle even when they are transporting different crops to the same mandi.
+
+The response estimates independent freight versus pooled freight using the existing transport provider capacity and rate. It combines quantity, required trips, the longest known mandi route, and a conservative pickup-cluster detour derived from Haversine distance after MongoDB has already narrowed the candidates. Estimated savings are clamped at zero; if pooling is not cheaper, the response sets `shareRecommended: false`. This is a freight-pooling estimate, not an optimized vehicle-routing guarantee.
+
+Install the backend MongoDB driver and configure these backend-only values:
+
+```powershell
+cd backend
+npm install mongodb@6.20.0
+```
+
+```text
+MONGODB_URI=your-private-mongodb-connection-string
+MONGODB_DB_NAME=kisansetu
+SHARED_LOGISTICS_RADIUS_KM=15
+SHARED_LOGISTICS_MAX_MATCHES=20
+```
+
+Never expose `MONGODB_URI` through a `VITE_*` variable or frontend code. If MongoDB is missing or temporarily unavailable, normal lot creation and the rest of KisanSetu continue to work; only the shared-logistics endpoint returns a safe temporary-unavailable response.
+
+The seeded Niphad lot uses a clearly demo-only approximate pickup point near Niphad for UI/testing purposes. User-created pickup coordinates come from explicit browser geolocation permission.

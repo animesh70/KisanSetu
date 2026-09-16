@@ -8,6 +8,7 @@ import KisanAssistant from './components/KisanAssistant';
 import PochitaFollower from './components/PochitaFollower';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGE_OPTIONS } from './i18n';
+import { canUseSharedLogistics, sharedLogisticsStatusKey } from './services/sharedLogistics.js';
 
 const fallback = {
   prices: [
@@ -57,6 +58,8 @@ export default function App() {
   const [showBuyerGuide, setShowBuyerGuide] = useState(false);
   const [farmerMode, setFarmerMode] = useState(false);
   const [kittyEnabled, setKittyEnabled] = useState(false);
+  const [sharedLogisticsByLot, setSharedLogisticsByLot] = useState({});
+  const [sharedLogisticsLoading, setSharedLogisticsLoading] = useState('');
 
   const loadDashboard = async () => {
     const quantity = Number(filters.quantity);
@@ -135,6 +138,7 @@ export default function App() {
       await api.resetDemo();
       await refreshWorkflow();
       setSelectedService(null);
+      setSharedLogisticsByLot({});
       notify('alerts.resetDone', 'alerts.resetTitle');
     } catch {
       showNotice('alerts.resetFailed');
@@ -150,6 +154,17 @@ export default function App() {
   const deleteLot = async (id) => {
     if (!window.confirm('Delete this crop lot and its pending offers?')) return;
     try { await api.deleteLot(id); await refreshWorkflow(); notify('alerts.lotDeleted', 'alerts.lotDeletedTitle'); } catch { showNotice('alerts.lotDeleteFailed'); }
+  };
+  const checkSharedLogistics = async (lotId) => {
+    setSharedLogisticsLoading(lotId);
+    try {
+      const result = await api.getSharedLogistics(lotId, 15);
+      setSharedLogisticsByLot((current) => ({ ...current, [lotId]: result }));
+    } catch {
+      setSharedLogisticsByLot((current) => ({ ...current, [lotId]: { error: true } }));
+    } finally {
+      setSharedLogisticsLoading('');
+    }
   };
   const downloadReceipt = (transaction) => {
     const receipt = `KISANSETU DEMO RECEIPT\n\nReference: ${transaction.paymentReference || 'Pending'}\nBuyer: ${transaction.buyerName || 'Verified buyer'}\nCrop lot: ${transaction.crop || 'Crop lot'}\nQuantity: ${transaction.quantity || '—'} quintals\nAmount: ${formatPrice(transaction.amount)}\nPayment status: ${transaction.paymentStatus}\nPayment method: ${transaction.paymentMethod || 'Demo payment'}\n\nThis is a hackathon-demo receipt, not a financial instrument.`;
@@ -188,7 +203,35 @@ export default function App() {
       <section className="net-card"><div><p className="eyebrow">{t('page.netComparison')}</p><h3>{t('page.chooseMore')}</h3><p>{t('page.netDescription')}</p></div><div className="net-options">{recommendationOptions.slice(0, 3).map((option) => <div key={`${option.type}-${option.name}`}><small>{option.type === 'buyer' ? t('page.verifiedBuyer') : t('page.mandi')}</small><strong>{option.name}</strong><span>{formatPrice(option.netPrice)}/q {t('page.net')}</span></div>)}</div></section>
       <section className="earnings-card"><div><p className="eyebrow">{t('page.earningsCalculator')}</p><h3>{t('page.receiveLot')}</h3><small>{t('page.earningsDescription')}</small></div><div className="earnings-grid"><span><small>{t('page.lotQuantity')}</small><strong>{filters.quantity} q</strong></span><span><small>{t('page.bestNet')}</small><strong>{formatPrice(data.recommendation?.expectedNetPrice)}</strong></span><span><small>{t('page.storageEstimate')}</small><strong>{hasNumber(holdingCostTotal) ? `−${formatPrice(holdingCostTotal)}` : hasNumber(holdingCostPerQuintal) ? `${formatPrice(holdingCostPerQuintal)}/q` : t('page.includedInNet')}</strong></span><span><small>{t('page.platformFee')}</small><strong>{formatPrice(firstNumber(data.recommendation?.platformFee, 0))}</strong></span><span className="earnings-total"><small>{t('page.farmerPayout')}</small><strong>{formatPrice(estimatedPayout)}</strong></span></div></section>
       <section id="crop-lots" className="section-header"><div><p className="eyebrow">{t('page.yourProduce')}</p><h2>{t('page.lotsTitle')}</h2><small className="data-note">{t('page.lotsDescription')}</small></div><button className="text-button" onClick={() => setShowLotForm(true)}>{t('page.createCropLot')} <PackagePlus size={16}/></button></section>
-      <section className="lot-grid">{lots.length ? lots.map((lot) => { const matchCount = offers.filter((offer) => offer.lotId === lot.id && offer.status === 'pending').length; return <article className="lot-card" key={lot.id}><div className="lot-card-head"><div><span className="lot-status">{lot.status === 'closed' ? t('page.closed') : t('page.open')}</span><h3>{lot.crop}</h3></div><span className="lot-quantity">{lot.quantity} q</span></div><div className="lot-meta"><span><small>{t('page.variety')}</small><strong>{lot.variety || t('page.notSpecified')}</strong></span><span><small>{t('page.quality')}</small><strong>{t('page.grade')} {lot.grade}</strong></span><span><small>{t('page.askingPrice')}</small><strong>{formatPrice(lot.askingPrice)}/q</strong></span><span><small>{t('page.harvested')}</small><strong>{lot.harvestDate ? new Date(`${lot.harvestDate}T00:00:00`).toLocaleDateString(LANGUAGE_OPTIONS.find((item) => item.code === i18n.language)?.locale || 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : t('page.notSpecified')}</strong></span></div><p className="match-count">{matchCount ? t('page.matchingOffers', { count: matchCount }) : lot.status === 'closed' ? t('page.lotClosed') : t('page.findingMatches')}</p><div className="lot-actions"><button className="outline-button" onClick={() => document.getElementById('transactions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{t('page.review')} <ArrowRight size={15}/></button>{lot.status !== 'closed' && <button className="close-lot-button" onClick={() => closeLot(lot.id)}>{t('page.close')}</button>}<button className="delete-lot-button" aria-label={t('page.delete')} onClick={() => deleteLot(lot.id)}><Trash2 size={14}/><span>{t('page.delete')}</span></button></div></article>; }) : <section className="empty-state"><PackagePlus size={21}/><div><strong>{t('page.noLots')}</strong><p>{t('page.noLotsDescription')}</p></div><button className="outline-button" onClick={() => setShowLotForm(true)}>{t('page.createCropLot')}</button></section>}</section>
+      <section className="lot-grid">{lots.length ? lots.map((lot) => {
+        const matchCount = offers.filter((offer) => offer.lotId === lot.id && offer.status === 'pending').length;
+        const shared = sharedLogisticsByLot[lot.id];
+        const sharedStatus = shared?.error ? 'unavailable' : shared ? sharedLogisticsStatusKey(shared) : '';
+        return <article className="lot-card" key={lot.id}>
+          <div className="lot-card-head"><div><span className="lot-status">{lot.status === 'closed' ? t('page.closed') : t('page.open')}</span><h3>{lot.crop}</h3></div><span className="lot-quantity">{lot.quantity} q</span></div>
+          <div className="lot-meta"><span><small>{t('page.variety')}</small><strong>{lot.variety || t('page.notSpecified')}</strong></span><span><small>{t('page.quality')}</small><strong>{t('page.grade')} {lot.grade}</strong></span><span><small>{t('page.askingPrice')}</small><strong>{formatPrice(lot.askingPrice)}/q</strong></span><span><small>{t('page.harvested')}</small><strong>{lot.harvestDate ? new Date(`${lot.harvestDate}T00:00:00`).toLocaleDateString(LANGUAGE_OPTIONS.find((item) => item.code === i18n.language)?.locale || 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : t('page.notSpecified')}</strong></span></div>
+          {lot.destinationMandiName && <p className="lot-destination"><MapPin size={14}/> {t('sharedLogistics.sameMandi')}: <strong>{lot.destinationMandiName}</strong></p>}
+          <p className="match-count">{matchCount ? t('page.matchingOffers', { count: matchCount }) : lot.status === 'closed' ? t('page.lotClosed') : t('page.findingMatches')}</p>
+          <div className="lot-actions">
+            <button className="outline-button" onClick={() => document.getElementById('transactions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{t('page.review')} <ArrowRight size={15}/></button>
+            {canUseSharedLogistics(lot) && <button className="outline-button shared-freight-button" disabled={sharedLogisticsLoading === lot.id} onClick={() => checkSharedLogistics(lot.id)}><Truck size={15}/>{sharedLogisticsLoading === lot.id ? t('sharedLogistics.loading') : t('sharedLogistics.sharedFreight')}</button>}
+            {lot.status !== 'closed' && <button className="close-lot-button" onClick={() => closeLot(lot.id)}>{t('page.close')}</button>}
+            <button className="delete-lot-button" aria-label={t('page.delete')} onClick={() => deleteLot(lot.id)}><Trash2 size={14}/><span>{t('page.delete')}</span></button>
+          </div>
+          {shared && <div className={`shared-logistics-panel ${sharedStatus === 'available' ? 'is-saving' : ''}`} role="status">
+            <div className="shared-logistics-head"><Truck size={17}/><strong>{t(`sharedLogistics.${sharedStatus}`)}</strong></div>
+            {!shared.error && shared.eligible && <>
+              <p>{t('sharedLogistics.withinKm', { radius: shared.radiusKm || 15 })} · {t('sharedLogistics.nearbyLots', { count: shared.nearbyLotCount || 0 })}</p>
+              {shared.destinationMandi?.name && <p>{t('sharedLogistics.destinationMandi')}: <strong>{shared.destinationMandi.name}</strong></p>}
+              {shared.group && shared.nearbyLotCount > 0 && <div className="shared-logistics-metrics">
+                <span><small>{t('sharedLogistics.totalQuantity')}</small><strong>{shared.group.totalQuantity} q</strong></span>
+                <span><small>{t('sharedLogistics.estimatedSaving')}</small><strong>{formatPrice(shared.group.estimatedSavings)}</strong></span>
+                <span><small>{t('sharedLogistics.yourSaving')}</small><strong>{formatPrice(shared.group.requestingLotSavings)}</strong></span>
+              </div>}
+            </>}
+          </div>}
+        </article>;
+      }) : <section className="empty-state"><PackagePlus size={21}/><div><strong>{t('page.noLots')}</strong><p>{t('page.noLotsDescription')}</p></div><button className="outline-button" onClick={() => setShowLotForm(true)}>{t('page.createCropLot')}</button></section>}</section>
       <section id="buyer-matches" className="section-header"><div><p className="eyebrow">{t('page.verifiedDemand')}</p><h2>{t('page.buyersMatched')}</h2><small className="data-note">{t('page.buyersNote')}</small></div><button className="text-button" onClick={() => setShowBuyerGuide(!showBuyerGuide)}>{showBuyerGuide ? t('page.hideRanking') : t('page.rankingGuide')} <ArrowRight size={16}/></button></section>
       {showBuyerGuide && <section className="buyer-guide"><strong>{t('page.matchFormula')}</strong><span>{t('page.offerPrice')} 15%</span><span>{t('page.distance')} 15%</span><span>{t('page.quantityFit')} 30%</span><span>{t('page.grade')} 20%</span><span>{t('page.reliability')} 20%</span></section>}
       <section className="buyer-grid">{(Array.isArray(data.buyers) ? data.buyers : []).slice(0, 3).map((buyer, index) => { const match = buyerOptionsByName.get(buyer.companyName); const score = match?.scoreBreakdown || {}; const estimatedNet = firstNumber(match?.estimatedNetPrice, match?.netPrice, buyer.estimatedNetPrice, buyer.netPrice); const matchScore = firstNumber(match?.matchScore, buyer.matchScore); return <article className="buyer-card" key={buyer.id}><div className="buyer-top"><div className="buyer-logo">{buyer.companyName.slice(0, 1)}</div>{buyer.verified && <span className="verified"><ShieldCheck size={15}/> {t('page.rank')} #{index + 1} · {t('page.demoVerified')}</span>}</div><h3>{buyer.companyName}</h3><p><MapPin size={15}/>{buyer.location} · {t('page.needs')} {buyer.requiredQuantity} q</p><div className="buyer-bottom"><div><small>{t('page.indicativeOffer')}</small><strong>{formatPrice(buyer.targetPrice)}/q</strong></div><div><small>{t('page.estimatedNet')}</small><strong>{formatPrice(estimatedNet)}/q</strong></div></div><div className="score-row"><span>{t('page.matchScore')}</span><strong>{hasNumber(matchScore) ? `${matchScore}%` : '—'}</strong><i><b style={{ width: `${hasNumber(matchScore) ? matchScore : 0}%` }}/></i></div>{expandedBuyer === buyer.id && <div className="score-breakdown"><span>{t('page.offerPrice')} <b>{score.offerPrice ?? '—'}/15</b></span><span>{t('page.distance')} <b>{score.distance ?? '—'}/15</b></span><span>{t('page.quantityFit')} <b>{score.quantityFit ?? '—'}/30</b></span><span>{t('page.grade')} <b>{score.grade ?? '—'}/20</b></span><span>{t('page.reliability')} <b>{score.reliability ?? '—'}/20</b></span></div>}<button className="outline-button" onClick={() => setExpandedBuyer(expandedBuyer === buyer.id ? '' : buyer.id)}>{expandedBuyer === buyer.id ? t('page.hideBreakdown') : t('page.viewBreakdown')}</button></article>; })}</section>
@@ -202,7 +245,7 @@ export default function App() {
       {!offers.some((offer) => offer.status === 'pending') && !transactions.length && <section className="empty-state"><CheckCircle2 size={21}/><div><strong>{t('page.noOffers')}</strong><p>{t('page.noOffersDescription')}</p></div></section>}
       <section className="support-card"><MessageSquareWarning size={22}/><div><p className="eyebrow">{t('page.needHelp')}</p><h3>{t('page.raiseGrievance')}</h3><p>{t('page.reportIssue')}</p></div><form onSubmit={submitGrievance}><input value={grievanceText} onChange={(event) => setGrievanceText(event.target.value)} aria-label={t('page.describeConcern')} placeholder={t('page.describeConcern')}/><button className="outline-button">{t('page.submit')}</button></form></section>
     </main>
-    {showLotForm && <LotModal crop={filters.crop} onClose={() => setShowLotForm(false)} onSave={createLot}/>} 
+    {showLotForm && <LotModal crop={filters.crop} markets={currentPrices} onClose={() => setShowLotForm(false)} onSave={createLot}/>}
     <KisanAssistant
       context={{ filters, data, lots, offers, transactions, logistics, selectedService }}
       kittyEnabled={kittyEnabled}
