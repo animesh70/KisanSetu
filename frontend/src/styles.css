@@ -1159,3 +1159,69 @@ html[lang="ur"] .support-card form input { direction: rtl; text-align: left; }
     background-position: center !important;
   }
 }
+
+/* =========================================================
+   DIRECT MARKETPLACE + ESCROW
+   ========================================================= */
+.direct-marketplace {
+  scroll-margin-top: 26px;
+  margin: 34px 0 18px;
+  padding: 26px;
+  border: 1px solid #dbe8de;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #fbfefc 0%, #f4faf6 100%);
+}
+.marketplace-head { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
+.marketplace-head h2 { margin: 4px 0 6px; font-size: 25px; color: #10281d; }
+.marketplace-head p:not(.eyebrow) { margin: 0; max-width: 720px; color: #64756d; line-height: 1.55; }
+.marketplace-buyer-switcher { min-width: 230px; padding: 12px 14px; background: #fff; border: 1px solid #d8e5db; border-radius: 14px; }
+.marketplace-buyer-switcher small { display: block; margin-bottom: 6px; color: #71827a; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.marketplace-buyer-switcher select, .marketplace-toolbar select, .escrow-actions input { width: 100%; border: 1px solid #d1dfd5; border-radius: 10px; background: #fff; padding: 9px 10px; color: #123326; font: inherit; }
+.marketplace-trust-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
+.marketplace-trust-row span { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 12px; background: #eaf7ee; color: #176d41; font-size: 12px; font-weight: 700; }
+.marketplace-toolbar { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 12px 0 18px; }
+.marketplace-toolbar label { display: grid; gap: 5px; min-width: 190px; font-size: 12px; color: #62746b; font-weight: 700; }
+.marketplace-notice { margin: 10px 0 16px; padding: 11px 13px; border-radius: 10px; background: #fff7dc; border: 1px solid #f0dfa0; color: #745c08; }
+.marketplace-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.marketplace-card { min-width: 0; padding: 18px; background: #fff; border: 1px solid #dbe6dd; border-radius: 17px; box-shadow: 0 10px 24px rgba(13, 70, 42, .05); }
+.marketplace-card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.marketplace-crop { padding: 5px 9px; border-radius: 999px; background: #e5f6e9; color: #16703f; font-weight: 800; font-size: 11px; text-transform: uppercase; }
+.marketplace-verified { display: inline-flex; align-items: center; gap: 5px; color: #16814a; font-size: 11px; font-weight: 700; }
+.marketplace-card h3 { margin: 15px 0 5px; color: #122c20; }
+.marketplace-card > p { margin: 0 0 14px; color: #728178; font-size: 13px; }
+.marketplace-price { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 0; border-top: 1px solid #edf2ee; border-bottom: 1px solid #edf2ee; }
+.marketplace-price strong { font-size: 20px; color: #0c6d3b; }
+.marketplace-price span, .marketplace-meta, .marketplace-farmer small { color: #718078; font-size: 12px; }
+.marketplace-meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.marketplace-farmer { display: flex; justify-content: space-between; align-items: center; margin: 14px 0; }
+.marketplace-buy { width: 100%; min-height: 42px; display: flex; justify-content: center; align-items: center; gap: 8px; border: 0; border-radius: 11px; background: #16804a; color: white; font-weight: 800; cursor: pointer; }
+.marketplace-buy:disabled { opacity: .58; cursor: wait; }
+.marketplace-empty { grid-column: 1 / -1; padding: 24px; text-align: center; color: #75857c; background: #fff; border: 1px dashed #cfddd2; border-radius: 14px; }
+.marketplace-purchases { margin-top: 25px; }
+.marketplace-subhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.marketplace-subhead h3 { margin: 2px 0 0; }
+.marketplace-subhead > span { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #e8f5ec; color: #167443; font-weight: 800; }
+.escrow-purchase { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 16px 18px; margin-top: 10px; border: 1px solid #dce7de; border-radius: 14px; background: #fff; }
+.escrow-status { display: inline-flex; gap: 6px; align-items: center; margin-bottom: 7px; color: #956706; background: #fff6d8; border-radius: 999px; padding: 5px 9px; font-size: 11px; font-weight: 800; text-transform: capitalize; }
+.escrow-purchase-main > p { margin: 5px 0 9px; color: #68776f; font-size: 12px; }
+.escrow-progress { display: flex; flex-wrap: wrap; gap: 7px; }
+.escrow-progress span { font-size: 10.5px; padding: 5px 8px; border-radius: 999px; background: #eef1ef; color: #728078; }
+.escrow-progress span.done { background: #def4e5; color: #126d3c; font-weight: 700; }
+.escrow-actions { min-width: 165px; display: grid; gap: 8px; }
+.escrow-released { display: inline-flex; align-items: center; gap: 7px; color: #167542; font-weight: 800; }
+.escrow-transaction-detail { display: flex !important; align-items: center; gap: 5px; color: #167342 !important; font-weight: 650; }
+
+@media (max-width: 1050px) {
+  .marketplace-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .marketplace-trust-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 700px) {
+  .direct-marketplace { padding: 18px; }
+  .marketplace-head, .marketplace-toolbar { flex-direction: column; align-items: stretch; }
+  .marketplace-buyer-switcher, .marketplace-toolbar label { min-width: 0; width: 100%; }
+  .marketplace-grid, .marketplace-trust-row { grid-template-columns: 1fr; }
+  .escrow-purchase { grid-template-columns: 1fr; }
+  .escrow-actions { width: 100%; }
+}
+.escrow-quality-check { display: flex; align-items: flex-start; gap: 8px; font-size: 11px; color: #51655b; line-height: 1.35; }
+.escrow-quality-check input { width: auto; margin-top: 2px; accent-color: #16804a; }

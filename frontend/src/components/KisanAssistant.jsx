@@ -35,6 +35,11 @@ const INTENT_RULES = [
     keywords: [['buyer', 6], ['offer', 6], ['match', 5], ['negotiate', 5], ['counter', 4]]
   },
   {
+    id: 'marketplace',
+    phrases: [['direct marketplace', 20], ['escrow payment', 19], ['escrow funds', 18], ['delivery otp', 18], ['proof of delivery', 17], ['buy directly', 16], ['platform fee', 15], ['split payout', 15]],
+    keywords: [['marketplace', 9], ['escrow', 9], ['otp', 8], ['commission', 6], ['payout', 5]]
+  },
+  {
     id: 'equipment',
     phrases: [['equipment sharing', 18], ['rent equipment', 17], ['rent tractor', 17], ['farm machinery', 16], ['rental activity', 16], ['rental request', 15], ['list equipment', 15], ['approve rental', 15], ['reject rental', 15], ['agricultural machinery', 14]],
     keywords: [['equipment', 8], ['tractor', 8], ['machinery', 7], ['machine', 6], ['rotavator', 8], ['harvester', 8], ['sprayer', 7], ['seeder', 7], ['thresher', 7], ['cultivator', 7], ['rental', 5], ['rent', 4]]
@@ -146,7 +151,7 @@ function localizedResponse(intent, context, t, question = '', followUp = null) {
   const query = normalise(question);
   const actions = {
     recommendation: [t('page.whyRecommendation'), 'recommendation'], market: [t('page.viewAllPrices'), 'market'],
-    buyer: [t('page.reviewOffers'), 'offers'], logistics: [t('page.logisticsOptions'), 'logistics'],
+    buyer: [t('page.reviewOffers'), 'offers'], marketplace: [t('nav.marketplace', { defaultValue: 'Direct marketplace' }), 'marketplace'], logistics: [t('page.logisticsOptions'), 'logistics'],
     equipment: [t('equipment.openMarketplace'), 'equipment'],
     payment: [t('page.transactions'), 'transactions'], earnings: [t('page.whyRecommendation'), 'recommendation'],
     lot: [t('page.createALot'), 'create-lot'], help: [t('page.whyRecommendation'), 'recommendation']
@@ -168,6 +173,18 @@ function localizedResponse(intent, context, t, question = '', followUp = null) {
     message: buyer ? `${buyer.name} · ${t('page.verifiedBuyerOffer')}: ${formatPerQuintal(buyer.offerPrice) || '—'} · ${t('page.matchScore')}: ${buyer.matchScore || '—'}%.` : t('page.noBuyer'),
     action, key
   };
+  if (intent === 'marketplace') {
+    const escrowTransactions = (context?.transactions || []).filter((item) => item?.escrowStatus);
+    const locked = escrowTransactions.filter((item) => item.escrowStatus === 'funds_locked').length;
+    const released = escrowTransactions.filter((item) => item.escrowStatus === 'released').length;
+    const openLots = (context?.lots || []).filter((item) => item.status === 'open').length;
+    return {
+      intent,
+      title: t('nav.marketplace', { defaultValue: 'Direct marketplace' }),
+      message: `Open farmer listings: ${openLots}. Escrow locked: ${locked}. Released: ${released}. Buyer funds are held until crop delivery and quality are confirmed with a 4-digit OTP; the platform fee is ${recommendation.platformFeePercent || 1.5}%, then the remaining payout is split between farmer and transporter.`,
+      action, key
+    };
+  }
   if (intent === 'equipment') {
     const snapshot = facts.equipmentSnapshot || {};
     if (snapshot.unavailable) {

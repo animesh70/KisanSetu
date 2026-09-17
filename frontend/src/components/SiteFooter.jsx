@@ -6,6 +6,7 @@ const navigation = [
   ['Market prices', 'Market prices'],
   ['My crop lots', 'My crop lots'],
   ['Buyer matches', 'Buyer matches'],
+  ['Direct marketplace', 'Direct marketplace'],
   ['Logistics', 'Logistics'],
   ['Equipment sharing', 'Equipment sharing'],
   ['Transactions', 'Transactions']

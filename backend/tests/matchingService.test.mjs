@@ -36,7 +36,8 @@ test('partial buyer demand exposes tradable and remaining quantities', () => {
   assert.equal(match.remainingQuantity, 50);
   assert.equal(match.estimatedGrossAmount, 130000);
   assert.equal(match.estimatedLogisticsTotal, 384);
-  assert.equal(match.estimatedNetAmount, 129616);
+  assert.equal(match.platformFee, 1950);
+  assert.equal(match.estimatedNetAmount, 127666);
   assert.equal(getTradableQuantity({ lotQuantity: 50, buyerRequiredQuantity: 120 }).remainingQuantity, 0);
 });
 
@@ -65,9 +66,10 @@ test('sell/hold comparison includes storage cost and forecast uncertainty', () =
   const marketData = [{ id: 'market', crop: 'Onion', mandiName: 'Demo Mandi', modalPrice: 2500, distanceKm: 10 }];
   const hold = buildSellingRecommendation({ crop: 'Onion', quantity: 100, grade: 'A', marketData, buyerData: [], logisticsData, forecast: { currentPrice: 2500, validationMAE: 10, forecast: [{ predictedPrice: 2520 }, { predictedPrice: 2600 }] } });
   assert.equal(hold.action, 'hold');
-  assert.equal(hold.sellNowNetPrice, 2499.9);
-  assert.equal(hold.bestHoldNetPrice, 2597.9);
-  assert.equal(hold.netAdvantage, 98);
+  assert.equal(hold.sellNowNetPrice, 2462.4);
+  assert.equal(hold.bestHoldNetPrice, 2558.9);
+  assert.equal(hold.netAdvantage, 96.5);
+  assert.equal(hold.platformFeePercent, 1.5);
 
   const storageRemovesGain = buildSellingRecommendation({ crop: 'Onion', quantity: 100, grade: 'A', marketData, buyerData: [], logisticsData, forecast: { currentPrice: 2500, validationMAE: 10, forecast: [{ predictedPrice: 2520 }] } });
   assert.equal(storageRemovesGain.action, 'sell');

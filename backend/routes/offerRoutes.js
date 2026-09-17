@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { buyers, cropLots, logisticsOptions, offers, transactions } from '../data/sampleData.js';
 import { requireRole } from '../middleware/auth.js';
 import { calculateLogisticsQuote, calculateNetPayable, DEFAULT_TRANSACTION_STORAGE_DAYS } from '../services/logisticsService.js';
+import { calculatePayoutSplit } from '../services/platformFeeService.js';
+import { createEscrowOrder, createOtpRecord, generateDeliveryOtp, getEscrowPublicConfig, isDemoEscrow } from '../services/escrowService.js';
 import { getTradableQuantity } from '../services/quantityService.js';
 
 const router = Router();
@@ -11,7 +13,7 @@ router.post('/', requireRole('buyer'), (req, res) => {
   offers.push(offer);
   res.status(201).json(offer);
 });
-router.patch('/:id', requireRole('farmer', 'fpo'), (req, res) => {
+router.patch('/:id', requireRole('farmer', 'fpo'), async (req, res) => {
   const offer = offers.find((item) => item.id === req.params.id);
   if (!offer) return res.status(404).json({ message: 'Offer not found.' });
   if (!['accepted', 'rejected', 'countered'].includes(req.body.status) || offer.status !== 'pending') return res.status(400).json({ message: 'Only a pending offer can be accepted, rejected, or countered.' });
@@ -43,9 +45,20 @@ router.patch('/:id', requireRole('farmer', 'fpo'), (req, res) => {
       holdingDays: storageDays
     });
     const grossAmount = offer.pricePerUnit * trade.tradableQuantity;
-    const platformFee = 0;
+    const split = calculatePayoutSplit({ grossAmount, logisticsFee: logisticsQuote.totalCost });
+    const platformFee = split.platformFee;
+    const transactionId = `txn-${Date.now()}`;
+    const otp = generateDeliveryOtp();
+    const otpRecord = createOtpRecord(otp);
+    let escrowOrder;
+    try {
+      escrowOrder = await createEscrowOrder({ transactionId, amount: grossAmount, notes: { offerId: offer.id, lotId: offer.lotId, buyerId: offer.buyerId, farmerId: offer.farmerId } });
+    } catch (error) {
+      return res.status(502).json({ message: 'The offer is valid, but the escrow payment session could not be created.' });
+    }
+    const demoEscrow = isDemoEscrow();
     const transaction = {
-      id: `txn-${Date.now()}`,
+      id: transactionId,
       lotId: offer.lotId,
       acceptedOfferId: offer.id,
       farmerId: offer.farmerId,
@@ -66,17 +79,27 @@ router.patch('/:id', requireRole('farmer', 'fpo'), (req, res) => {
       transportTrips: logisticsQuote.type === 'Transport' ? logisticsQuote.trips : 0,
       storageDays: logisticsQuote.type === 'Storage' ? logisticsQuote.holdingDays : null,
       logisticsPaidBy: 'farmer',
+      platformFeePercent: split.platformFeePercent,
       platformFee,
+      transporterPayout: split.transporterPayout,
+      farmerPayout: split.farmerPayout,
       netPayable: calculateNetPayable({ grossAmount, logisticsFee: logisticsQuote.totalCost, platformFee }),
       status: 'confirmed',
-      paymentStatus: 'awaiting_delivery',
-      paymentMethod: 'UPI / bank transfer (demo)',
-      paymentReference: `KS-${Date.now().toString().slice(-6)}`,
+      paymentStatus: demoEscrow ? 'escrow_locked' : 'awaiting_escrow_funding',
+      escrowStatus: demoEscrow ? 'funds_locked' : 'awaiting_payment',
+      escrowProvider: escrowOrder.provider,
+      escrowOrderId: escrowOrder.orderId,
+      escrowPaymentId: null,
+      escrowTransfers: [],
+      paymentMethod: demoEscrow ? 'KisanSetu escrow (demo)' : 'Razorpay Route',
+      paymentReference: escrowOrder.orderId,
       pickupWindow: 'Tomorrow, 10:00 AM – 2:00 PM (demo)',
       driverName: 'Ramesh Jadhav (demo)',
       driverPhone: '98220 01100',
-      paymentDue: 'Within 24 hours of delivery (demo)',
-      auditLog: [{ event: 'Offer accepted', at: new Date().toISOString() }]
+      paymentDue: 'Released only after buyer verifies delivery OTP',
+      ...otpRecord,
+      ...(demoEscrow && getEscrowPublicConfig().otpExposedInDemo ? { demoDeliveryOtp: otp } : {}),
+      auditLog: [{ event: demoEscrow ? 'Offer accepted; demo funds locked in escrow' : 'Offer accepted; Razorpay escrow order created', at: new Date().toISOString() }]
     };
     offer.status = 'accepted';
     offer.tradableQuantity = trade.tradableQuantity;

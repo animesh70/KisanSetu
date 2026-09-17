@@ -4,6 +4,7 @@ import { requireRole } from '../middleware/auth.js';
 import { calculateLogisticsQuote, calculateNetPayable, DEFAULT_TRANSACTION_STORAGE_DAYS } from '../services/logisticsService.js';
 import { isMongooseConfigured } from '../db/mongoose.js';
 import { resetEquipmentDemoData } from '../repositories/equipmentRepository.js';
+import { calculatePayoutSplit } from '../services/platformFeeService.js';
 
 const router = Router();
 router.get('/logistics', (req, res) => res.json(logisticsOptions));
@@ -14,6 +15,7 @@ router.patch('/transactions/:id/logistics', requireRole('farmer', 'fpo', 'buyer'
   const transaction = transactions.find((item) => item.id === req.params.id);
   const logistics = logisticsOptions.find((item) => item.id === req.body.logisticsOptionId);
   if (!transaction) return res.status(404).json({ message: 'Transaction not found.' });
+  if (transaction.escrowProvider === 'razorpay' && transaction.escrowStatus === 'funds_locked') return res.status(409).json({ message: 'Logistics cannot change after Razorpay escrow funds are locked.' });
   if (!logistics || logistics.available === false) return res.status(400).json({ message: 'Select an available logistics option.' });
   const buyer = buyers.find((item) => item.id === transaction.buyerId);
   const buyerDistanceKm = Number.isFinite(Number(transaction.buyerDistanceKm))
@@ -37,6 +39,11 @@ router.patch('/transactions/:id/logistics', requireRole('farmer', 'fpo', 'buyer'
   transaction.logisticsCostPerQuintal = logisticsQuote.costPerQuintal;
   transaction.transportTrips = logisticsQuote.type === 'Transport' ? logisticsQuote.trips : 0;
   transaction.storageDays = logisticsQuote.type === 'Storage' ? logisticsQuote.holdingDays : null;
+  const split = calculatePayoutSplit({ grossAmount: transaction.grossAmount, logisticsFee: transaction.logisticsFee, percent: transaction.platformFeePercent });
+  transaction.platformFeePercent = split.platformFeePercent;
+  transaction.platformFee = split.platformFee;
+  transaction.transporterPayout = split.transporterPayout;
+  transaction.farmerPayout = split.farmerPayout;
   transaction.netPayable = calculateNetPayable({
     grossAmount: transaction.grossAmount,
     logisticsFee: transaction.logisticsFee,
@@ -50,8 +57,10 @@ router.patch('/transactions/:id/status', requireRole('farmer', 'fpo', 'buyer', '
   if (!transaction) return res.status(404).json({ message: 'Transaction not found.' });
   const requestedStatus = req.body.status || transaction.status;
   if (requestedStatus !== transaction.status && nextStatus[transaction.status] !== requestedStatus) return res.status(400).json({ message: `Invalid transaction transition from ${transaction.status} to ${requestedStatus}.` });
+  if (requestedStatus === 'completed' && transaction.escrowStatus && transaction.escrowStatus !== 'released') return res.status(409).json({ message: 'Escrow transactions complete only after buyer delivery-OTP verification releases the funds.' });
   if (requestedStatus === 'pickup_scheduled' && !transaction.logisticsOptionId) return res.status(400).json({ message: 'Please choose a logistics option before scheduling pickup.' });
   transaction.status = requestedStatus;
+  if (transaction.escrowStatus && req.body.paymentStatus === 'paid' && transaction.escrowStatus !== 'released') return res.status(409).json({ message: 'Escrow payment cannot be marked paid before escrow release.' });
   transaction.paymentStatus = req.body.paymentStatus || transaction.paymentStatus;
   transaction.auditLog.push({ event: `Status changed to ${transaction.status}`, at: new Date().toISOString() });
   res.json(transaction);

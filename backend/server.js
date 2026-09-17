@@ -12,8 +12,11 @@ import supportRoutes from './routes/supportRoutes.js';
 import advisorRoutes from './routes/advisorRoutes.js';
 import ttsRoutes from './routes/ttsRoutes.js';
 import equipmentRoutes from './routes/equipmentRoutes.js';
+import marketplaceRoutes from './routes/marketplaceRoutes.js';
+import escrowRoutes, { handleRazorpayWebhook } from './routes/escrowRoutes.js';
 
 const app = express();
+app.post('/api/escrow/webhooks/razorpay', express.raw({ type: 'application/json' }), handleRazorpayWebhook);
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json());
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'KisanSetu API' }));
@@ -28,6 +31,8 @@ app.use('/api/advisor', advisorRoutes);
 app.use('/api/tts', ttsRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/equipment', equipmentRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/escrow', escrowRoutes);
 app.use('/api', supportRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
 app.use((error, req, res, next) => {

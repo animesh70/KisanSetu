@@ -1,6 +1,7 @@
 import { logisticsOptions, mandiPrices, trendByCrop } from '../data/sampleData.js';
 import { calculateLogisticsQuote, getDefaultTransportOption } from './logisticsService.js';
 import { parseQuantity } from './quantityService.js';
+import { calculatePlatformFee, getPlatformFeePercent } from './platformFeeService.js';
 
 const DEFAULT_MARKET_QUANTITY = 100;
 
@@ -16,6 +17,9 @@ export function getPrices({ crop, district, quantity } = {}) {
     (!district || price.district.toLowerCase() === district.toLowerCase())
   ).map((price) => {
     const quote = calculateLogisticsQuote({ logisticsOption: transportOption, quantity: safeQuantity, distanceKm: price.distanceKm });
+    const grossAmount = price.modalPrice * safeQuantity;
+    const platformFee = calculatePlatformFee(grossAmount);
+    const platformFeePerQuintal = safeQuantity ? platformFee / safeQuantity : 0;
     return {
       ...price,
       tradableQuantity: safeQuantity,
@@ -24,9 +28,11 @@ export function getPrices({ crop, district, quantity } = {}) {
       transportTrips: quote.trips,
       estimatedLogisticsTotal: quote.totalCost,
       estimatedLogisticsCost: quote.costPerQuintal,
-      netPrice: Math.round((price.modalPrice - quote.costPerQuintal) * 100) / 100,
-      grossAmount: price.modalPrice * safeQuantity,
-      estimatedNetAmount: Math.round((price.modalPrice * safeQuantity - quote.totalCost) * 100) / 100
+      platformFeePercent: getPlatformFeePercent(),
+      platformFee,
+      netPrice: Math.round((price.modalPrice - quote.costPerQuintal - platformFeePerQuintal) * 100) / 100,
+      grossAmount,
+      estimatedNetAmount: Math.round((grossAmount - quote.totalCost - platformFee) * 100) / 100
     };
   }).sort((a, b) => b.netPrice - a.netPrice);
 }

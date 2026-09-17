@@ -277,3 +277,45 @@ Rental activity keeps the status badge and owner actions together. Incoming requ
 **Reset demo** now clears `equipment_rentals`, removes user-created equipment listings, reseeds the three starter demo machines when equipment demo seeding is enabled, resets the equipment account to Sanjay, and refreshes the equipment marketplace. This keeps MongoDB-backed equipment data in sync with the rest of the resettable prototype.
 
 The KisanSetu Assistant also understands Equipment Sharing questions. It can explain how to list or rent machinery, how owners approve/reject requests, summarize the selected demo farmer's rental activity, and show currently available equipment from the live `/api/equipment` data. The assistant's general introduction mentions equipment sharing, and the equipment help text is localized with the same 12-language setup used elsewhere in KisanSetu.
+
+## Direct Marketplace + Escrow Demo
+
+KisanSetu now includes a direct farmer-to-buyer marketplace built on top of open crop lots. The default hackathon flow uses a safe in-app escrow simulation; an optional Razorpay Route path is included for test-mode payment collection, held transfers, webhook reconciliation, and split payout release.
+
+### Flow
+
+1. An open crop lot appears in **Direct marketplace**.
+2. A demo buyer chooses **Buy securely**.
+3. Funds are locked (`funds_locked`) instead of being marked paid to the farmer immediately.
+4. The existing delivery workflow advances through pickup, transit, and delivered.
+5. The buyer confirms crop arrival/quality and enters a 4-digit delivery OTP.
+6. Escrow is released. The configured platform fee is retained and the remaining amount is split between the farmer and transporter.
+
+### Platform fee
+
+`PLATFORM_FEE_PERCENT` defaults to `1.5` and is clamped to the intended 1–2% range. The same fee is included in market net-realisation calculations, buyer-match net calculations, accepted-offer transactions, direct-marketplace transactions, and the Net Earnings Calculator.
+
+### Escrow environment variables
+
+```env
+PLATFORM_FEE_PERCENT=1.5
+ESCROW_PROVIDER=demo
+ESCROW_DEMO_OTP_EXPOSE=true
+
+# Optional Razorpay Route TEST configuration
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
+RAZORPAY_LINKED_ACCOUNTS_JSON={}
+```
+
+`RAZORPAY_LINKED_ACCOUNTS_JSON` maps KisanSetu payees to Razorpay Route linked-account IDs, for example:
+
+```json
+{
+  "farmer-1": "acc_xxxxxxxxxxxxxx",
+  "transporter-default": "acc_yyyyyyyyyyyyyy"
+}
+```
+
+Keep all payment-provider secrets backend-only. Start with provider test mode and complete provider onboarding/KYC before considering live settlement flows.

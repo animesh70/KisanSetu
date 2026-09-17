@@ -247,6 +247,18 @@ for (const [language, resource] of Object.entries(resources)) {
   }
 }
 
+
+const marketplaceNavLabels = {
+  en: 'Direct marketplace', hi: 'सीधा बाज़ार', mr: 'थेट बाजारपेठ', ur: 'براہ راست مارکیٹ', tr: 'Doğrudan pazar', es: 'Mercado directo',
+  pa: 'ਸਿੱਧਾ ਬਾਜ਼ਾਰ', or: 'ସିଧା ବଜାର', bn: 'সরাসরি বাজার', gu: 'સીધું બજાર', te: 'ప్రత్యక్ష మార్కెట్', ta: 'நேரடி சந்தை'
+};
+for (const [language, resource] of Object.entries(resources)) {
+  resource.translation.nav = { ...resource.translation.nav, marketplace: marketplaceNavLabels[language] || marketplaceNavLabels.en };
+  resource.translation.alerts.escrowOtpRequired = language === 'en'
+    ? 'This escrow transaction can finish only after the buyer verifies the 4-digit delivery OTP.'
+    : `${resource.translation.page.delivery} · OTP · ${resource.translation.page.payment}`;
+}
+
 const savedLanguage = localStorage.getItem('kisansetu-language');
 const initialLanguage = LANGUAGE_OPTIONS.some((item) => item.code === savedLanguage) ? savedLanguage : 'en';
 

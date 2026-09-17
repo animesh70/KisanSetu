@@ -1,6 +1,7 @@
 import { buyers, logisticsOptions, mandiPrices } from '../data/sampleData.js';
 import { getForecast } from './marketService.js';
 import { calculateLogisticsQuote, getDefaultStorageOption, getDefaultTransportOption, roundMoney } from './logisticsService.js';
+import { calculatePlatformFee, getPlatformFeePercent } from './platformFeeService.js';
 import { getTradableQuantity, parseQuantity } from './quantityService.js';
 
 const MINIMUM_HOLD_ADVANTAGE_PER_QUINTAL = 25;
@@ -10,8 +11,11 @@ function cropMatches(item, crop) {
 }
 
 function optionNetPrice(grossPrice, quote) {
-  return roundMoney(Number(grossPrice || 0) - Number(quote.costPerQuintal || 0));
+  const grossPerQuintal = Number(grossPrice || 0);
+  const feePerQuintal = calculatePlatformFee(grossPerQuintal, getPlatformFeePercent());
+  return roundMoney(grossPerQuintal - Number(quote.costPerQuintal || 0) - feePerQuintal);
 }
+
 
 /**
  * Backward-compatible helper for callers that only need a per-quintal quote.
@@ -37,7 +41,8 @@ export function getMatches(lot, { buyerData = buyers, transportOption = getDefau
       const score = Math.round((quantityFit * 30 + gradeFit * 20 + priceScore * 15 + distanceScore * 15 + (buyer.reliabilityScore / 5) * 20) * 10) / 10;
       const logistics = calculateLogisticsQuote({ logisticsOption: transportOption, quantity: quantity.tradableQuantity, distanceKm: buyer.distanceKm });
       const estimatedGrossAmount = roundMoney(buyer.targetPrice * quantity.tradableQuantity);
-      const estimatedNetAmount = roundMoney(estimatedGrossAmount - logistics.totalCost);
+      const platformFee = calculatePlatformFee(estimatedGrossAmount);
+      const estimatedNetAmount = roundMoney(estimatedGrossAmount - logistics.totalCost - platformFee);
       const estimatedNetPrice = quantity.tradableQuantity ? roundMoney(estimatedNetAmount / quantity.tradableQuantity) : 0;
       const scoreBreakdown = {
         offerPrice: Math.round(priceScore * 15),
@@ -58,6 +63,8 @@ export function getMatches(lot, { buyerData = buyers, transportOption = getDefau
         estimatedLogisticsTotal: logistics.totalCost,
         estimatedLogisticsCost: logistics.costPerQuintal,
         estimatedGrossAmount,
+        platformFee,
+        platformFeePercent: getPlatformFeePercent(),
         estimatedNetAmount,
         estimatedNetPrice,
         reasons: [
@@ -77,6 +84,7 @@ function getMarketOptions({ crop, quantity, marketData, transportOption }) {
     .map((item) => {
       const logistics = calculateLogisticsQuote({ logisticsOption: transportOption, quantity, distanceKm: item.distanceKm });
       const grossAmount = roundMoney(item.modalPrice * quantity);
+      const platformFee = calculatePlatformFee(grossAmount);
       const netPrice = optionNetPrice(item.modalPrice, logistics);
       return {
         id: item.id,
@@ -90,7 +98,9 @@ function getMarketOptions({ crop, quantity, marketData, transportOption }) {
         estimatedLogisticsTotal: logistics.totalCost,
         estimatedLogisticsCost: logistics.costPerQuintal,
         grossAmount,
-        estimatedNetAmount: roundMoney(grossAmount - logistics.totalCost),
+        platformFee,
+        platformFeePercent: getPlatformFeePercent(),
+        estimatedNetAmount: roundMoney(grossAmount - logistics.totalCost - platformFee),
         netPrice,
         type: 'mandi'
       };
@@ -112,6 +122,8 @@ function getBuyerOptions(matches) {
       estimatedLogisticsTotal: item.estimatedLogisticsTotal,
       estimatedLogisticsCost: item.estimatedLogisticsCost,
       grossAmount: item.estimatedGrossAmount,
+      platformFee: item.platformFee,
+      platformFeePercent: item.platformFeePercent,
       estimatedNetAmount: item.estimatedNetAmount,
       netPrice: item.estimatedNetPrice,
       matchScore: item.matchScore,
@@ -161,7 +173,9 @@ export function buildSellingRecommendation({
     const transportCostPerQuintal = futureRoute?.estimatedLogisticsCost || 0;
     const transportTotal = futureRoute?.estimatedLogisticsTotal || 0;
     const grossAmount = roundMoney(Number(point.predictedPrice) * safeQuantity);
-    const netPrice = roundMoney(Number(point.predictedPrice) - storage.costPerQuintal - transportCostPerQuintal);
+    const platformFee = calculatePlatformFee(grossAmount);
+    const platformFeePerQuintal = safeQuantity ? roundMoney(platformFee / safeQuantity) : 0;
+    const netPrice = roundMoney(Number(point.predictedPrice) - storage.costPerQuintal - transportCostPerQuintal - platformFeePerQuintal);
     return {
       day: days,
       forecastGrossPrice: Number(point.predictedPrice),
@@ -169,8 +183,10 @@ export function buildSellingRecommendation({
       storageCostTotal: storage.totalCost,
       transportCostPerQuintal,
       transportCostTotal: transportTotal,
+      platformFee,
+      platformFeePercent: getPlatformFeePercent(),
       netPrice,
-      estimatedNetAmount: roundMoney(grossAmount - storage.totalCost - transportTotal)
+      estimatedNetAmount: roundMoney(grossAmount - storage.totalCost - transportTotal - platformFee)
     };
   });
   const bestHoldOption = holdOptions.reduce((best, option) => (!best || option.netPrice > best.netPrice ? option : best), null);
@@ -249,6 +265,8 @@ export function buildSellingRecommendation({
       predictedPeakDay: rawPeak?.day || 0,
       source: forecast?.source || 'demo-fallback'
     },
+    platformFeePercent: getPlatformFeePercent(),
+    platformFee: action === 'hold' ? bestHoldOption?.platformFee || 0 : sellNowOption?.platformFee || 0,
     estimatedPayout: action === 'hold' ? bestHoldOption?.estimatedNetAmount || 0 : sellNowOption?.estimatedNetAmount || 0,
     options,
     reasons: action === 'hold'

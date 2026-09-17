@@ -60,6 +60,15 @@ export const api = {
   deleteLot: (id) => request(`/lots/${id}`, { method: 'DELETE', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' } }),
   getSharedLogistics: (id, radiusKm = 15) => request(`/lots/${encodeURIComponent(id)}/shared-logistics?radiusKm=${encodeURIComponent(radiusKm)}`),
 
+
+  getMarketplaceListings: () => request('/marketplace/listings'),
+  getMarketplacePurchases: (buyerId = 'buyer-1') => request('/marketplace/purchases', { headers: { 'x-demo-role': 'buyer', 'x-demo-user-id': buyerId } }),
+  checkoutMarketplaceListing: (lotId, quantity, buyerId = 'buyer-1') => request(`/marketplace/listings/${encodeURIComponent(lotId)}/checkout`, { method: 'POST', headers: { 'x-demo-role': 'buyer', 'x-demo-user-id': buyerId }, body: JSON.stringify({ quantity }) }),
+  verifyMarketplacePayment: (payload, buyerId = 'buyer-1') => request('/escrow/razorpay/verify', { method: 'POST', headers: { 'x-demo-role': 'buyer', 'x-demo-user-id': buyerId }, body: JSON.stringify(payload) }),
+  getEscrowPaymentSession: (transactionId, buyerId = 'buyer-1') => request(`/escrow/transactions/${encodeURIComponent(transactionId)}/payment-session`, { headers: { 'x-demo-role': 'buyer', 'x-demo-user-id': buyerId } }),
+  getDeliveryOtp: (transactionId, buyerId = 'buyer-1') => request(`/escrow/transactions/${encodeURIComponent(transactionId)}/delivery-otp`, { headers: { 'x-demo-role': 'buyer', 'x-demo-user-id': buyerId } }),
+  verifyEscrowDelivery: (transactionId, otp, qualityAccepted, buyerId = 'buyer-1') => request(`/escrow/transactions/${encodeURIComponent(transactionId)}/verify-delivery`, { method: 'POST', headers: { 'x-demo-role': 'buyer', 'x-demo-user-id': buyerId }, body: JSON.stringify({ otp, qualityAccepted }) }),
+
   getEquipment: (filters = {}, demoUserId = 'farmer-1') => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== null && value !== '') params.set(key, value);
