@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, IndianRupee, LockKeyhole, PackageCheck, ShieldCheck, ShoppingCart, Truck } from 'lucide-react';
 import { api } from '../services/api.js';
+import { useTranslation } from 'react-i18next';
 
 const DEMO_BUYERS = [
   { id: 'buyer-1', name: 'FreshMart Foods' },
@@ -27,6 +28,7 @@ async function loadRazorpayCheckout() {
 }
 
 export default function DirectMarketplace({ onChanged, refreshToken = '' }) {
+  const { t, i18n } = useTranslation();
   const [listings, setListings] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [buyerId, setBuyerId] = useState('buyer-1');
@@ -50,7 +52,7 @@ export default function DirectMarketplace({ onChanged, refreshToken = '' }) {
       setListings(nextListings);
       setPurchases(nextPurchases);
     } catch (error) {
-      setNotice(error.message || 'Marketplace data could not be loaded.');
+      setNotice(error.message || t('marketplace.dataLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -63,7 +65,7 @@ export default function DirectMarketplace({ onChanged, refreshToken = '' }) {
 
   const launchRazorpay = async (checkout) => {
     const ready = await loadRazorpayCheckout();
-    if (!ready) throw new Error('Razorpay Checkout could not be loaded.');
+    if (!ready) throw new Error(t('marketplace.razorpayLoadFailed'));
     return new Promise((resolve, reject) => {
       const instance = new window.Razorpay({
         key: checkout.payment.razorpayKeyId,
@@ -80,7 +82,7 @@ export default function DirectMarketplace({ onChanged, refreshToken = '' }) {
             reject(error);
           }
         },
-        modal: { ondismiss: () => reject(new Error('Payment window was closed.')) },
+        modal: { ondismiss: () => reject(new Error(t('marketplace.paymentClosed'))) },
         theme: { color: '#157347' }
       });
       instance.open();
@@ -94,12 +96,12 @@ export default function DirectMarketplace({ onChanged, refreshToken = '' }) {
       const checkout = await api.checkoutMarketplaceListing(listing.id, listing.quantity, buyerId);
       if (checkout.payment.provider === 'razorpay') await launchRazorpay(checkout);
       setNotice(checkout.payment.provider === 'demo'
-        ? 'Demo escrow funded. The buyer funds are now locked until delivery OTP verification.'
-        : 'Payment verified and marketplace funds are locked for delivery.');
+        ? t('marketplace.demoFunded')
+        : t('marketplace.paymentFunded'));
       await refresh();
       onChanged?.();
     } catch (error) {
-      setNotice(error.message || 'Secure checkout failed.');
+      setNotice(error.message || t('marketplace.secureCheckoutFailed'));
     } finally {
       setBusy('');
     }
@@ -111,11 +113,11 @@ export default function DirectMarketplace({ onChanged, refreshToken = '' }) {
     try {
       const payment = await api.getEscrowPaymentSession(transaction.id, buyerId);
       await launchRazorpay({ transaction, payment });
-      setNotice('Payment verified and buyer funds are locked for delivery.');
+      setNotice(t('marketplace.paymentFunded'));
       await refresh();
       onChanged?.();
     } catch (error) {
-      setNotice(error.message || 'Escrow funding failed.');
+      setNotice(error.message || t('marketplace.escrowFundingFailed'));
     } finally {
       setBusy('');
     }
@@ -126,43 +128,60 @@ export default function DirectMarketplace({ onChanged, refreshToken = '' }) {
       const result = await api.getDeliveryOtp(transaction.id, buyerId);
       setOtpByTransaction((current) => ({ ...current, [transaction.id]: result.otp }));
     } catch (error) {
-      setNotice(error.message || 'Delivery OTP is not available here.');
+      setNotice(error.message || t('marketplace.otpUnavailable'));
     }
   };
 
   const verifyDelivery = async (transaction) => {
     const otp = String(otpByTransaction[transaction.id] || '');
     if (!/^\d{4}$/.test(otp)) {
-      setNotice('Enter the 4-digit delivery OTP.');
+      setNotice(t('marketplace.enterOtp'));
       return;
     }
     if (!qualityByTransaction[transaction.id]) {
-      setNotice('Confirm that the crop arrived and its quality is acceptable before releasing escrow.');
+      setNotice(t('marketplace.confirmQuality'));
       return;
     }
     setBusy(transaction.id);
     try {
       await api.verifyEscrowDelivery(transaction.id, otp, true, buyerId);
-      setNotice('Delivery verified. Escrow release has been completed or queued with the payment provider.');
+      setNotice(t('marketplace.deliveryVerified'));
       await refresh();
       onChanged?.();
     } catch (error) {
-      setNotice(error.message || 'Delivery verification failed.');
+      setNotice(error.message || t('marketplace.deliveryFailed'));
     } finally {
       setBusy('');
     }
   };
 
+  const cropLabel = (value) => {
+    if (value === 'All') return t('marketplace.all');
+    const key = String(value || '').toLowerCase();
+    return t(`crops.${key}`, { defaultValue: value });
+  };
+  const varietyLabel = (listing) => listing.variety === 'Red Onion' ? t('marketplace.redOnion') : (listing.variety || cropLabel(listing.crop));
+  const harvestLabel = (value) => {
+    if (!value) return t('marketplace.recently');
+    const date = new Date(`${value}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(i18n.resolvedLanguage || i18n.language, { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+  const escrowStatusLabel = (value) => ({
+    awaiting_payment: t('marketplace.statusAwaiting'),
+    funds_locked: t('marketplace.statusLocked'),
+    released: t('marketplace.statusReleased')
+  }[value] || String(value || '').replaceAll('_', ' '));
+
   return (
     <section id="direct-marketplace" className="direct-marketplace">
       <div className="marketplace-head">
         <div>
-          <p className="eyebrow">DIRECT FARMER MARKETPLACE</p>
-          <h2>Buy directly from verified farm listings</h2>
-          <p>Buyer funds are locked first. Farmer and transporter payouts release only after delivery verification.</p>
+          <p className="eyebrow">{t('marketplace.eyebrow')}</p>
+          <h2>{t('marketplace.title')}</h2>
+          <p>{t('marketplace.subtitle')}</p>
         </div>
         <div className="marketplace-buyer-switcher">
-          <small>Demo buyer</small>
+          <small>{t('marketplace.demoBuyer')}</small>
           <select value={buyerId} onChange={(event) => setBuyerId(event.target.value)}>
             {DEMO_BUYERS.map((buyer) => <option key={buyer.id} value={buyer.id}>{buyer.name}</option>)}
           </select>
@@ -170,59 +189,59 @@ export default function DirectMarketplace({ onChanged, refreshToken = '' }) {
       </div>
 
       <div className="marketplace-trust-row">
-        <span><LockKeyhole size={17}/> Funds locked</span>
-        <span><PackageCheck size={17}/> OTP proof of delivery</span>
-        <span><IndianRupee size={17}/> {feePercent}% platform fee</span>
-        <span><Truck size={17}/> Split farmer + transporter payout</span>
+        <span><LockKeyhole size={17}/> {t('marketplace.fundsLocked')}</span>
+        <span><PackageCheck size={17}/> {t('marketplace.otpProof')}</span>
+        <span><IndianRupee size={17}/> {t('marketplace.platformFee', { fee: feePercent })}</span>
+        <span><Truck size={17}/> {t('marketplace.splitPayout')}</span>
       </div>
 
       <div className="marketplace-toolbar">
         <strong>{buyerName}</strong>
-        <label>Crop<select value={crop} onChange={(event) => setCrop(event.target.value)}>{crops.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label>{t('marketplace.crop')}<select value={crop} onChange={(event) => setCrop(event.target.value)}>{crops.map((item) => <option key={item} value={item}>{cropLabel(item)}</option>)}</select></label>
       </div>
 
       {notice && <div className="marketplace-notice" role="status">{notice}</div>}
 
       <div className="marketplace-grid">
-        {loading ? <div className="marketplace-empty">Loading secure listings…</div> : visibleListings.map((listing) => (
+        {loading ? <div className="marketplace-empty">{t('marketplace.loading')}</div> : visibleListings.map((listing) => (
           <article className="marketplace-card" key={listing.id}>
-            <div className="marketplace-card-top"><span className="marketplace-crop">{listing.crop}</span><span className="marketplace-verified"><ShieldCheck size={15}/> Verified farmer</span></div>
-            <h3>{listing.variety || listing.crop}</h3>
-            <p>{listing.grade ? `Grade ${listing.grade}` : 'Graded produce'} · Harvested {listing.harvestDate || 'recently'}</p>
-            <div className="marketplace-price"><strong>{money(listing.askingPrice)}/q</strong><span>{listing.quantity} q available</span></div>
-            <div className="marketplace-meta"><span>{listing.location}</span><span>{listing.destinationMandiName || 'Direct pickup'}</span></div>
-            <div className="marketplace-farmer"><strong>{listing.farmer?.name || 'Verified farmer'}</strong><small>{listing.farmer?.district || ''}</small></div>
-            <button className="marketplace-buy" disabled={busy === listing.id} onClick={() => buyListing(listing)}><ShoppingCart size={17}/>{busy === listing.id ? 'Securing…' : 'Buy securely'}</button>
+            <div className="marketplace-card-top"><span className="marketplace-crop">{cropLabel(listing.crop)}</span><span className="marketplace-verified"><ShieldCheck size={15}/> {t('marketplace.verifiedFarmer')}</span></div>
+            <h3>{varietyLabel(listing)}</h3>
+            <p>{listing.grade ? t('marketplace.grade', { grade: listing.grade }) : t('marketplace.gradedProduce')} · {t('marketplace.harvested', { date: harvestLabel(listing.harvestDate) })}</p>
+            <div className="marketplace-price"><strong>{money(listing.askingPrice)}/{t('page.quintals')}</strong><span>{t('marketplace.available', { quantity: listing.quantity })}</span></div>
+            <div className="marketplace-meta"><span>{listing.location}</span><span>{listing.destinationMandiName || t('marketplace.directPickup')}</span></div>
+            <div className="marketplace-farmer"><strong>{listing.farmer?.name || t('marketplace.verifiedFarmer')}</strong><small>{listing.farmer?.district || ''}</small></div>
+            <button className="marketplace-buy" disabled={busy === listing.id} onClick={() => buyListing(listing)}><ShoppingCart size={17}/>{busy === listing.id ? t('marketplace.securing') : t('marketplace.buySecurely')}</button>
           </article>
         ))}
-        {!loading && !visibleListings.length && <div className="marketplace-empty">No open listings match this crop right now.</div>}
+        {!loading && !visibleListings.length && <div className="marketplace-empty">{t('marketplace.noListings')}</div>}
       </div>
 
       <div className="marketplace-purchases">
-        <div className="marketplace-subhead"><div><p className="eyebrow">ESCROW ACTIVITY</p><h3>My secure purchases</h3></div><span>{purchases.length}</span></div>
-        {!purchases.length && <div className="marketplace-empty">No direct marketplace purchases for this buyer yet.</div>}
+        <div className="marketplace-subhead"><div><p className="eyebrow">{t('marketplace.escrowActivity')}</p><h3>{t('marketplace.securePurchases')}</h3></div><span>{purchases.length}</span></div>
+        {!purchases.length && <div className="marketplace-empty">{t('marketplace.noPurchases')}</div>}
         {purchases.map((transaction) => (
           <article className="escrow-purchase" key={transaction.id}>
             <div className="escrow-purchase-main">
-              <div className="escrow-status"><LockKeyhole size={15}/>{String(transaction.escrowStatus || 'awaiting').replaceAll('_', ' ')}</div>
-              <strong>{transaction.crop} · {transaction.quantity} q · {money(transaction.grossAmount)}</strong>
-              <p>Farmer payout {money(transaction.farmerPayout)} · Transporter {money(transaction.transporterPayout)} · Platform {money(transaction.platformFee)} ({transaction.platformFeePercent || 1.5}%)</p>
+              <div className="escrow-status"><LockKeyhole size={15}/>{escrowStatusLabel(transaction.escrowStatus)}</div>
+              <strong>{cropLabel(transaction.crop)} · {transaction.quantity} {t('page.quintals')} · {money(transaction.grossAmount)}</strong>
+              <p>{t('marketplace.farmerPayout')} {money(transaction.farmerPayout)} · {t('marketplace.transporterPayout')} {money(transaction.transporterPayout)} · {t('marketplace.platform')} {money(transaction.platformFee)} ({transaction.platformFeePercent || 1.5}%)</p>
               <div className="escrow-progress">
-                <span className={transaction.escrowStatus === 'funds_locked' || transaction.escrowStatus === 'released' ? 'done' : ''}>1. Funds locked</span>
-                <span className={['delivered', 'completed'].includes(transaction.status) ? 'done' : ''}>2. Crop delivered</span>
-                <span className={transaction.deliveryOtpVerifiedAt ? 'done' : ''}>3. OTP verified</span>
-                <span className={transaction.escrowStatus === 'released' ? 'done' : ''}>4. Split released</span>
+                <span className={transaction.escrowStatus === 'funds_locked' || transaction.escrowStatus === 'released' ? 'done' : ''}>1. {t('marketplace.stepFunds')}</span>
+                <span className={['delivered', 'completed'].includes(transaction.status) ? 'done' : ''}>2. {t('marketplace.stepDelivered')}</span>
+                <span className={transaction.deliveryOtpVerifiedAt ? 'done' : ''}>3. {t('marketplace.stepOtp')}</span>
+                <span className={transaction.escrowStatus === 'released' ? 'done' : ''}>4. {t('marketplace.stepReleased')}</span>
               </div>
             </div>
             <div className="escrow-actions">
-              {transaction.escrowStatus === 'awaiting_payment' && <button className="primary-button" type="button" disabled={busy === transaction.id} onClick={() => fundExistingEscrow(transaction)}><LockKeyhole size={15}/> Fund escrow</button>}
+              {transaction.escrowStatus === 'awaiting_payment' && <button className="primary-button" type="button" disabled={busy === transaction.id} onClick={() => fundExistingEscrow(transaction)}><LockKeyhole size={15}/> {t('marketplace.fundEscrow')}</button>}
               {transaction.status === 'delivered' && transaction.escrowStatus === 'funds_locked' && <>
-                {transaction.demoDeliveryOtp && !otpByTransaction[transaction.id] && <button className="outline-button" type="button" onClick={() => revealDemoOtp(transaction)}>Show demo OTP</button>}
-                <label className="escrow-quality-check"><input type="checkbox" checked={Boolean(qualityByTransaction[transaction.id])} onChange={(event) => setQualityByTransaction((current) => ({ ...current, [transaction.id]: event.target.checked }))}/><span>I confirm crop arrival and acceptable quality.</span></label>
-                <input inputMode="numeric" maxLength={4} placeholder="4-digit OTP" value={otpByTransaction[transaction.id] || ''} onChange={(event) => setOtpByTransaction((current) => ({ ...current, [transaction.id]: event.target.value.replace(/\D/g, '').slice(0, 4) }))}/>
-                <button className="primary-button" type="button" disabled={busy === transaction.id || !qualityByTransaction[transaction.id]} onClick={() => verifyDelivery(transaction)}>Verify & release</button>
+                {transaction.demoDeliveryOtp && !otpByTransaction[transaction.id] && <button className="outline-button" type="button" onClick={() => revealDemoOtp(transaction)}>{t('marketplace.showDemoOtp')}</button>}
+                <label className="escrow-quality-check"><input type="checkbox" checked={Boolean(qualityByTransaction[transaction.id])} onChange={(event) => setQualityByTransaction((current) => ({ ...current, [transaction.id]: event.target.checked }))}/><span>{t('marketplace.qualityConfirm')}</span></label>
+                <input inputMode="numeric" maxLength={4} placeholder={t('marketplace.otpPlaceholder')} value={otpByTransaction[transaction.id] || ''} onChange={(event) => setOtpByTransaction((current) => ({ ...current, [transaction.id]: event.target.value.replace(/\D/g, '').slice(0, 4) }))}/>
+                <button className="primary-button" type="button" disabled={busy === transaction.id || !qualityByTransaction[transaction.id]} onClick={() => verifyDelivery(transaction)}>{t('marketplace.verifyRelease')}</button>
               </>}
-              {transaction.escrowStatus === 'released' && <span className="escrow-released"><CheckCircle2 size={16}/> Payout released</span>}
+              {transaction.escrowStatus === 'released' && <span className="escrow-released"><CheckCircle2 size={16}/> {t('marketplace.payoutReleased')}</span>}
             </div>
           </article>
         ))}

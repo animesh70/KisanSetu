@@ -102,6 +102,34 @@ function resolveIntent(question, previousIntent, context) {
   return { id: top.id, followUp: null };
 }
 
+function normaliseAnyLanguage(value) {
+  return String(value || '').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ');
+}
+
+function resolveLocalizedIntent(question, previousIntent, context, t) {
+  const resolved = resolveIntent(question, previousIntent, context);
+  if (resolved.id !== 'help') return resolved;
+  const text = normaliseAnyLanguage(question);
+  const candidates = [
+    ['marketplace', [t('nav.marketplace'), t('marketplace.title'), t('marketplace.escrowActivity')]],
+    ['equipment', [t('equipment.nav'), t('equipment.title'), t('equipment.listEquipment'), t('equipment.rent')]],
+    ['market', [t('nav.markets'), t('page.bestMandiRate'), t('page.nearbyPrices'), t('page.viewAllPrices')]],
+    ['buyer', [t('nav.buyers'), t('page.verifiedBuyerOffer'), t('page.buyersMatched'), t('page.reviewOffers')]],
+    ['logistics', [t('nav.logistics'), t('page.logisticsOptions'), t('page.transport'), t('page.storage')]],
+    ['payment', [t('nav.transactions'), t('page.transactions'), t('page.payment'), t('page.delivery')]],
+    ['lot', [t('nav.lots'), t('page.createALot'), t('page.createCropLot'), t('page.lotsTitle')]],
+    ['earnings', [t('page.bestNetPrice'), t('page.farmerPayout'), t('page.earningsCalculator')]],
+    ['recommendation', [t('page.sellNow'), t('page.holdBriefly'), t('page.smartPrediction'), t('page.whyRecommendation')]]
+  ];
+  for (const [id, labels] of candidates) {
+    if (labels.some((label) => {
+      const token = normaliseAnyLanguage(label);
+      return token.length > 2 && text.includes(token);
+    })) return { id, followUp: null };
+  }
+  return resolved;
+}
+
 function numberFrom(...values) {
   return values.find(hasNumber);
 }
@@ -181,7 +209,7 @@ function localizedResponse(intent, context, t, question = '', followUp = null) {
     return {
       intent,
       title: t('nav.marketplace', { defaultValue: 'Direct marketplace' }),
-      message: `Open farmer listings: ${openLots}. Escrow locked: ${locked}. Released: ${released}. Buyer funds are held until crop delivery and quality are confirmed with a 4-digit OTP; the platform fee is ${recommendation.platformFeePercent || 1.5}%, then the remaining payout is split between farmer and transporter.`,
+      message: t('marketplace.assistantOverview', { open: openLots, locked, released, fee: recommendation.platformFeePercent || 1.5 }),
       action, key
     };
   }
@@ -455,7 +483,7 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
       const result = message.priceResult;
       return {
         ...message,
-        title: `${result.crop} · ${t('page.priceTrend')}`,
+        title: `${t(`crops.${String(result.crop || '').toLowerCase()}`, { defaultValue: result.crop })} · ${t('page.priceTrend')}`,
         message: `${t('page.currentPrice')}: ${formatPerQuintal(result.currentPrice)} · ${t('page.forecastPeak')}: ${formatPerQuintal(result.predictedPeak)}. ${t(result.recommendation === 'hold' ? 'page.holdReason' : 'page.sellReason')} ${t('page.forecastDisclaimer')}`,
         action: t('page.whyRecommendation')
       };
@@ -503,7 +531,7 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
       setInput('');
       return;
     }
-    const resolved = forcedIntent ? { id: forcedIntent === 'price' ? 'recommendation' : forcedIntent, followUp: null } : resolveIntent(clean, lastIntent, context);
+    const resolved = forcedIntent ? { id: forcedIntent === 'price' ? 'recommendation' : forcedIntent, followUp: null } : resolveLocalizedIntent(clean, lastIntent, context, t);
     let responseContext = context;
     let equipmentSnapshot = null;
     if (resolved.id === 'equipment') {
@@ -530,7 +558,7 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
         const result = await api.getAdvisorPrice(context?.filters?.crop || 'Onion', 7);
         nextMessage = {
           intent: 'recommendation',
-          title: `${result.crop} · ${t('page.priceTrend')}`,
+          title: `${t(`crops.${String(result.crop || '').toLowerCase()}`, { defaultValue: result.crop })} · ${t('page.priceTrend')}`,
           message: `${t('page.currentPrice')}: ${formatPerQuintal(result.currentPrice)} · ${t('page.forecastPeak')}: ${formatPerQuintal(result.predictedPeak)}. ${t(result.recommendation === 'hold' ? 'page.holdReason' : 'page.sellReason')} ${t('page.forecastDisclaimer')}`,
           action: t('page.whyRecommendation'),
           key: 'recommendation',

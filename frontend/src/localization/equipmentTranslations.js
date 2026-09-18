@@ -27,6 +27,88 @@ const translations = {
   ta: { ...en, nav: 'உபகரண பகிர்வு', eyebrow: 'விவசாயி-விவசாயி உபகரணம்', title: 'அருகிலுள்ள விவசாயிகளிடமிருந்து வேளாண் இயந்திரங்களை வாடகைக்கு எடுக்கவும்', subtitle: 'பயன்பாடில்லாத இயந்திரங்களை பட்டியலிட்டு, கிடைக்கும் உபகரணங்களை வடிகட்டி வாடகை கோரிக்கை அனுப்புங்கள்.', demoUser: 'டெமோ பயனர்', viewingAs: 'இவராக பார்க்கப்படுகிறது', switchUser: 'பயனரை மாற்று', demoUserHint: 'வாடகையாளர் மற்றும் உபகரண உரிமையாளர் இரு பக்க செயல்களையும் காட்ட விவசாயியை மாற்றுங்கள்.', listEquipment: 'உபகரணம் பட்டியலிடு', filters: 'வடிகட்டிகள்', type: 'உபகரண வகை', allTypes: 'அனைத்து வகைகள்', district: 'மாவட்டம்', maxRate: 'அதிகபட்ச தின வாடகை', availableFrom: 'கிடைக்கும் தொடக்கம்', availableTo: 'கிடைக்கும் முடிவு', applyFilters: 'வடிகட்டு', clearFilters: 'அழி', loading: 'உபகரணங்கள் ஏற்றப்படுகின்றன…', unavailable: 'உபகரண பகிர்வு தற்காலிகமாக கிடைக்கவில்லை.', empty: 'பொருத்தமான உபகரணம் இல்லை.', perDay: '/நாள்', deposit: 'பாதுகாப்பு வைப்பு', condition: 'நிலை', available: 'கிடைக்கும்', owner: 'உரிமையாளர்', rent: 'வாடகைக்கு எடு', yourListing: 'உங்கள் பட்டியல்', deleteListing: 'பட்டியல் நீக்கு', demo: 'டெமோ பட்டியல்', myRentals: 'வாடகை செயல்பாடு', noRentals: 'இன்னும் கோரிக்கைகள் இல்லை.', incoming: 'வரும் கோரிக்கை', outgoing: 'உங்கள் கோரிக்கை', approve: 'ஒப்புதல்', reject: 'நிராகரி', cancel: 'ரத்து', complete: 'முடிந்தது', listTitle: 'வேளாண் உபகரணம் பட்டியலிடு', equipmentName: 'உபகரண பெயர்', description: 'விவரம்', state: 'மாநிலம்', dailyRate: 'தின வாடகை (₹)', securityDeposit: 'பாதுகாப்பு வைப்பு (₹)', horsepowerLabel: 'ஹார்ஸ்பவர் (விருப்பம்)', publish: 'பட்டியல் வெளியிடு', publishing: 'வெளியிடுகிறது…', close: 'மூடு', rentTitle: 'வாடகை கோரிக்கை', startDate: 'தொடக்க தேதி', endDate: 'முடிவு தேதி', estimatedRent: 'மதிப்பிடப்பட்ட வாடகை', requestRental: 'கோரிக்கை அனுப்பு', requesting: 'அனுப்புகிறது…', rentalNote: 'உரிமையாளர் ஒப்புதல் தேவை. வைப்பு தனியாக காட்டப்படும்.', listedSuccess: 'உபகரணம் பட்டியலிடப்பட்டது.', rentalSuccess: 'வாடகை கோரிக்கை அனுப்பப்பட்டது.', deletedSuccess: 'பட்டியல் நீக்கப்பட்டது.', statusUpdated: 'வாடகை நிலை புதுப்பிக்கப்பட்டது.' }
 };
 
+const nestedTranslations = {
+  hi: {
+    statuses: { requested: 'अनुरोध भेजा', approved: 'मंज़ूर', rejected: 'अस्वीकृत', cancelled: 'रद्द', completed: 'पूरा' },
+    types: { Tractor: 'ट्रैक्टर', Rotavator: 'रोटावेटर', Harvester: 'हार्वेस्टर', Seeder: 'सीडर', Sprayer: 'स्प्रेयर', Thresher: 'थ्रेशर', Cultivator: 'कल्टीवेटर', Other: 'अन्य' },
+    conditions: { Good: 'अच्छी', 'Very Good': 'बहुत अच्छी', Excellent: 'उत्कृष्ट' },
+    rentalDays: '{{count}} दिन का किराया', rentalDays_other: '{{count}} दिन का किराया', dayShort: 'दिन',
+    demoDescriptions: { Tractor: '45 HP ट्रैक्टर, जुताई, ढुलाई और बुवाई के लिए उपयुक्त।', Rotavator: 'बीज-बेड तैयार करने और फसल अवशेष मिलाने के लिए भारी रोटावेटर।', Sprayer: 'फसल सुरक्षा कार्य के लिए 16 लीटर रिचार्जेबल स्प्रेयर।' }
+  },
+  mr: {
+    statuses: { requested: 'विनंती पाठवली', approved: 'मंजूर', rejected: 'नाकारले', cancelled: 'रद्द', completed: 'पूर्ण' },
+    types: { Tractor: 'ट्रॅक्टर', Rotavator: 'रोटावेटर', Harvester: 'हार्वेस्टर', Seeder: 'सीडर', Sprayer: 'फवारणी यंत्र', Thresher: 'थ्रेशर', Cultivator: 'कल्टिवेटर', Other: 'इतर' },
+    conditions: { Good: 'चांगली', 'Very Good': 'खूप चांगली', Excellent: 'उत्कृष्ट' },
+    rentalDays: '{{count}} दिवसांचे भाडे', rentalDays_other: '{{count}} दिवसांचे भाडे', dayShort: 'दिवस',
+    demoDescriptions: { Tractor: '45 HP ट्रॅक्टर नांगरणी, वाहतूक आणि पेरणीसाठी योग्य.', Rotavator: 'बीजपात्र तयार करणे आणि अवशेष मिसळण्यासाठी मजबूत रोटावेटर.', Sprayer: 'पीक संरक्षणासाठी 16 लिटर रिचार्जेबल फवारणी यंत्र.' }
+  },
+  ur: {
+    statuses: { requested: 'درخواست دی گئی', approved: 'منظور', rejected: 'مسترد', cancelled: 'منسوخ', completed: 'مکمل' },
+    types: { Tractor: 'ٹریکٹر', Rotavator: 'روٹاویٹر', Harvester: 'ہارویسٹر', Seeder: 'سیڈر', Sprayer: 'اسپرے مشین', Thresher: 'تھریشر', Cultivator: 'کلٹیویٹر', Other: 'دیگر' },
+    conditions: { Good: 'اچھی', 'Very Good': 'بہت اچھی', Excellent: 'بہترین' },
+    rentalDays: '{{count}} دن کا کرایہ', rentalDays_other: '{{count}} دن کا کرایہ', dayShort: 'دن',
+    demoDescriptions: { Tractor: '45 HP ٹریکٹر جوتائی، نقل و حمل اور بوائی کے لیے موزوں۔', Rotavator: 'بیج کی تیاری اور باقیات ملانے کے لیے مضبوط روٹاویٹر۔', Sprayer: 'فصل کے تحفظ کے لیے 16 لیٹر ریچارج ایبل اسپرے مشین۔' }
+  },
+  tr: {
+    statuses: { requested: 'İstek gönderildi', approved: 'Onaylandı', rejected: 'Reddedildi', cancelled: 'İptal edildi', completed: 'Tamamlandı' },
+    types: { Tractor: 'Traktör', Rotavator: 'Rotovatör', Harvester: 'Biçerdöver', Seeder: 'Ekim makinesi', Sprayer: 'Püskürtücü', Thresher: 'Harman makinesi', Cultivator: 'Kültivatör', Other: 'Diğer' },
+    conditions: { Good: 'İyi', 'Very Good': 'Çok iyi', Excellent: 'Mükemmel' }, rentalDays: '{{count}} günlük kiralama', rentalDays_other: '{{count}} günlük kiralama', dayShort: 'gün',
+    demoDescriptions: { Tractor: 'Toprak işleme, taşıma ve ekim için uygun 45 HP traktör.', Rotavator: 'Tohum yatağı hazırlama ve artık karıştırma için ağır hizmet rotovatörü.', Sprayer: 'Bitki koruma için 16 litrelik şarj edilebilir püskürtücü.' }
+  },
+  es: {
+    statuses: { requested: 'Solicitado', approved: 'Aprobado', rejected: 'Rechazado', cancelled: 'Cancelado', completed: 'Completado' },
+    types: { Tractor: 'Tractor', Rotavator: 'Rotocultor', Harvester: 'Cosechadora', Seeder: 'Sembradora', Sprayer: 'Pulverizador', Thresher: 'Trilladora', Cultivator: 'Cultivador', Other: 'Otro' },
+    conditions: { Good: 'Buena', 'Very Good': 'Muy buena', Excellent: 'Excelente' }, rentalDays: 'Alquiler de {{count}} día', rentalDays_other: 'Alquiler de {{count}} días', dayShort: 'días',
+    demoDescriptions: { Tractor: 'Tractor de 45 HP apto para labranza, transporte y siembra.', Rotavator: 'Rotocultor reforzado para preparar el lecho y mezclar residuos.', Sprayer: 'Pulverizador recargable de 16 litros para protección del cultivo.' }
+  },
+  pa: {
+    statuses: { requested: 'ਬੇਨਤੀ ਭੇਜੀ', approved: 'ਮਨਜ਼ੂਰ', rejected: 'ਰੱਦ', cancelled: 'ਰੱਦ ਕੀਤੀ', completed: 'ਪੂਰਾ' },
+    types: { Tractor: 'ਟਰੈਕਟਰ', Rotavator: 'ਰੋਟਾਵੇਟਰ', Harvester: 'ਹਾਰਵੇਸਟਰ', Seeder: 'ਸੀਡਰ', Sprayer: 'ਸਪਰੇਅਰ', Thresher: 'ਥ੍ਰੈਸ਼ਰ', Cultivator: 'ਕਲਟੀਵੇਟਰ', Other: 'ਹੋਰ' },
+    conditions: { Good: 'ਚੰਗੀ', 'Very Good': 'ਬਹੁਤ ਚੰਗੀ', Excellent: 'ਸ਼ਾਨਦਾਰ' }, rentalDays: '{{count}} ਦਿਨ ਦਾ ਕਿਰਾਇਆ', rentalDays_other: '{{count}} ਦਿਨ ਦਾ ਕਿਰਾਇਆ', dayShort: 'ਦਿਨ',
+    demoDescriptions: { Tractor: '45 HP ਟਰੈਕਟਰ ਜੋਤਾਈ, ਢੁਆਈ ਅਤੇ ਬਿਜਾਈ ਲਈ ਉਚਿਤ।', Rotavator: 'ਬੀਜ ਬੈਡ ਤਿਆਰ ਕਰਨ ਅਤੇ ਬਚਤ ਮਿਲਾਉਣ ਲਈ ਭਾਰੀ ਰੋਟਾਵੇਟਰ।', Sprayer: 'ਫਸਲ ਸੁਰੱਖਿਆ ਲਈ 16 ਲੀਟਰ ਰੀਚਾਰਜੇਬਲ ਸਪਰੇਅਰ।' }
+  },
+  or: {
+    statuses: { requested: 'ଅନୁରୋଧ ପଠାଗଲା', approved: 'ମଞ୍ଜୁର', rejected: 'ପ୍ରତ୍ୟାଖ୍ୟାନ', cancelled: 'ବାତିଲ', completed: 'ସମ୍ପୂର୍ଣ୍ଣ' },
+    types: { Tractor: 'ଟ୍ରାକ୍ଟର', Rotavator: 'ରୋଟାଭେଟର', Harvester: 'ହାରଭେଷ୍ଟର', Seeder: 'ସିଡର', Sprayer: 'ସ୍ପ୍ରେୟର', Thresher: 'ଥ୍ରେସର', Cultivator: 'କଲ୍ଟିଭେଟର', Other: 'ଅନ୍ୟ' },
+    conditions: { Good: 'ଭଲ', 'Very Good': 'ବହୁତ ଭଲ', Excellent: 'ଉତ୍କୃଷ୍ଟ' }, rentalDays: '{{count}} ଦିନର ଭଡ଼ା', rentalDays_other: '{{count}} ଦିନର ଭଡ଼ା', dayShort: 'ଦିନ',
+    demoDescriptions: { Tractor: 'ଚାଷ, ବୋଝା ବହନ ଓ ବିଆ ବୁଣା ପାଇଁ ଉପଯୁକ୍ତ 45 HP ଟ୍ରାକ୍ଟର।', Rotavator: 'ବିଆ ଶଯ୍ୟା ପ୍ରସ୍ତୁତି ଓ ଅବଶେଷ ମିଶାଇବା ପାଇଁ ଭାରୀ ରୋଟାଭେଟର।', Sprayer: 'ଫସଲ ସୁରକ୍ଷା ପାଇଁ 16 ଲିଟର ରିଚାର୍ଜେବଲ୍ ସ୍ପ୍ରେୟର।' }
+  },
+  bn: {
+    statuses: { requested: 'অনুরোধ পাঠানো', approved: 'অনুমোদিত', rejected: 'প্রত্যাখ্যাত', cancelled: 'বাতিল', completed: 'সম্পন্ন' },
+    types: { Tractor: 'ট্র্যাক্টর', Rotavator: 'রোটাভেটর', Harvester: 'হারভেস্টার', Seeder: 'সিডার', Sprayer: 'স্প্রেয়ার', Thresher: 'থ্রেশার', Cultivator: 'কাল্টিভেটর', Other: 'অন্যান্য' },
+    conditions: { Good: 'ভালো', 'Very Good': 'খুব ভালো', Excellent: 'চমৎকার' }, rentalDays: '{{count}} দিনের ভাড়া', rentalDays_other: '{{count}} দিনের ভাড়া', dayShort: 'দিন',
+    demoDescriptions: { Tractor: 'চাষ, পরিবহন ও বপনের জন্য উপযোগী 45 HP ট্র্যাক্টর।', Rotavator: 'বীজতলা প্রস্তুতি ও অবশিষ্টাংশ মেশানোর জন্য শক্তিশালী রোটাভেটর।', Sprayer: 'ফসল সুরক্ষার জন্য 16 লিটার রিচার্জেবল স্প্রেয়ার।' }
+  },
+  gu: {
+    statuses: { requested: 'વિનંતી મોકલાઈ', approved: 'મંજૂર', rejected: 'નકારી', cancelled: 'રદ', completed: 'પૂર્ણ' },
+    types: { Tractor: 'ટ્રેક્ટર', Rotavator: 'રોટાવેટર', Harvester: 'હાર્વેસ્ટર', Seeder: 'સીડર', Sprayer: 'સ્પ્રેયર', Thresher: 'થ્રેશર', Cultivator: 'કલ્ટિવેટર', Other: 'અન્ય' },
+    conditions: { Good: 'સારી', 'Very Good': 'ખૂબ સારી', Excellent: 'ઉત્કૃષ્ટ' }, rentalDays: '{{count}} દિવસનું ભાડું', rentalDays_other: '{{count}} દિવસનું ભાડું', dayShort: 'દિવસ',
+    demoDescriptions: { Tractor: 'ખેડાણ, ઢુલાઈ અને વાવણી માટે યોગ્ય 45 HP ટ્રેક્ટર.', Rotavator: 'બીજ પાથરી તૈયાર કરવા અને અવશેષ મિશ્રિત કરવા માટે મજબૂત રોટાવેટર.', Sprayer: 'પાક સુરક્ષા માટે 16 લિટર રિચાર્જેબલ સ્પ્રેયર.' }
+  },
+  te: {
+    statuses: { requested: 'అభ్యర్థన పంపబడింది', approved: 'ఆమోదించబడింది', rejected: 'తిరస్కరించబడింది', cancelled: 'రద్దు', completed: 'పూర్తి' },
+    types: { Tractor: 'ట్రాక్టర్', Rotavator: 'రోటావేటర్', Harvester: 'హార్వెస్టర్', Seeder: 'సీడర్', Sprayer: 'స్ప్రేయర్', Thresher: 'త్రెషర్', Cultivator: 'కల్టివేటర్', Other: 'ఇతర' },
+    conditions: { Good: 'మంచి', 'Very Good': 'చాలా మంచి', Excellent: 'అద్భుతం' }, rentalDays: '{{count}} రోజుల అద్దె', rentalDays_other: '{{count}} రోజుల అద్దె', dayShort: 'రోజులు',
+    demoDescriptions: { Tractor: 'దున్నడం, రవాణా మరియు విత్తనానికి సరైన 45 HP ట్రాక్టర్.', Rotavator: 'విత్తన పడక తయారీ మరియు అవశేషాల కలయికకు హెవీ డ్యూటీ రోటావేటర్.', Sprayer: 'పంట రక్షణ కోసం 16 లీటర్ల రీచార్జ్ చేయగల స్ప్రేయర్.' }
+  },
+  ta: {
+    statuses: { requested: 'கோரிக்கை அனுப்பப்பட்டது', approved: 'ஒப்புதல்', rejected: 'நிராகரிக்கப்பட்டது', cancelled: 'ரத்து', completed: 'முடிந்தது' },
+    types: { Tractor: 'டிராக்டர்', Rotavator: 'ரோட்டாவேட்டர்', Harvester: 'அறுவடை இயந்திரம்', Seeder: 'விதைப்பான்', Sprayer: 'தெளிப்பான்', Thresher: 'தானிய பிரிப்பான்', Cultivator: 'கல்டிவேட்டர்', Other: 'மற்றவை' },
+    conditions: { Good: 'நல்லது', 'Very Good': 'மிக நல்லது', Excellent: 'சிறப்பு' }, rentalDays: '{{count}} நாள் வாடகை', rentalDays_other: '{{count}} நாள் வாடகை', dayShort: 'நாள்',
+    demoDescriptions: { Tractor: 'உழவு, சுமை ஏற்றுதல் மற்றும் விதைப்புக்கு ஏற்ற 45 HP டிராக்டர்.', Rotavator: 'விதை படுக்கை தயாரிப்பு மற்றும் கழிவுகளை கலப்பதற்கான கனரக ரோட்டாவேட்டர்.', Sprayer: 'பயிர் பாதுகாப்புக்கு 16 லிட்டர் மீள்சார்ஜ் தெளிப்பான்.' }
+  }
+};
+
+for (const [language, nested] of Object.entries(nestedTranslations)) {
+  translations[language] = {
+    ...translations[language],
+    ...nested,
+    statuses: { ...en.statuses, ...nested.statuses },
+    types: { ...en.types, ...nested.types },
+    conditions: { ...en.conditions, ...nested.conditions }
+  };
+}
+
 const assistantEquipmentTranslations = {
   en: {
     assistantTitle: 'Equipment sharing', openMarketplace: 'Open equipment sharing',

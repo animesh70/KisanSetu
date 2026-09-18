@@ -46,7 +46,7 @@ test('all 12 languages turn rupee and q symbols into natural spoken labels', () 
 test('decimal prices preserve their full numeric value in speech SSML', () => {
   const spoken = prepareSpeechContent('₹2,677.8/q', 'or');
   assert.ok(spoken.includes('<say-as interpret-as="cardinal">2677</say-as>'));
-  assert.ok(spoken.includes('ଦଶମିକ <say-as interpret-as="characters">8</say-as>'));
+  assert.ok(spoken.includes('ଦଶମିକ <say-as interpret-as="cardinal">8</say-as>'));
 });
 
 test('request validation rejects empty, long, and unsupported input', () => {

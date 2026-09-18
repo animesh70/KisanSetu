@@ -48,7 +48,8 @@ function numberAsSsml(value, decimalWord) {
   const [integer, fraction] = String(value).replaceAll(',', '').split('.');
   const integerSsml = `<say-as interpret-as="cardinal">${integer}</say-as>`;
   if (!fraction) return integerSsml;
-  return `${integerSsml} ${escapeSsml(decimalWord)} <say-as interpret-as="characters">${fraction}</say-as>`;
+  const fractionSsml = [...fraction].map((digit) => `<say-as interpret-as="cardinal">${digit}</say-as>`).join(' ');
+  return `${integerSsml} ${escapeSsml(decimalWord)} ${fractionSsml}`;
 }
 
 export function prepareSpeechContent(text, language) {
