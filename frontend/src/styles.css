@@ -237,6 +237,57 @@ html[lang="ur"] .support-card form input { direction: rtl; text-align: left; }
 .status-requested { background: #fff7df; color: #8a6917; }
 .equipment-rental-controls { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: max-content; }
 .equipment-rental-actions { display: flex; align-items: center; gap: 7px; flex-wrap: nowrap; justify-content: flex-end; }
+.equipment-activity-loader {
+  min-height: 172px;
+  padding: 28px 20px 26px;
+  border: 1px dashed #dbe6df;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfdfc 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.equipment-github-loader-mascot {
+  width: 52px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 9px;
+  animation: equipmentGithubMascotStep 1.15s steps(2, end) infinite;
+}
+.equipment-github-loader-mascot img {
+  display: block;
+  width: 52px;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  opacity: .66;
+  user-select: none;
+  pointer-events: none;
+}
+.equipment-activity-loader-copy strong {
+  display: block;
+  margin: 0;
+  color: #3f4d60;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.equipment-activity-loader-copy p {
+  margin: 4px 0 0;
+  color: #91a0ae;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+@keyframes equipmentGithubMascotStep {
+  0%, 49.99% { transform: translateY(0); }
+  50%, 100% { transform: translateY(-2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .equipment-github-loader-mascot { animation: none; }
+}
 .rental-action { min-height: 34px; border-radius: 10px; padding: 7px 11px; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font: inherit; font-size: .74rem; font-weight: 800; cursor: pointer; white-space: nowrap; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
 .rental-action:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(31, 78, 48, .08); }
 .rental-action-approve, .rental-action-complete { background: #eaf7ef; border-color: #bfe1cb; color: #17683a; }

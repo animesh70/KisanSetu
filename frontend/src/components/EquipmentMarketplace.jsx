@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../services/api.js';
 import EquipmentListingModal from './EquipmentListingModal.jsx';
 import EquipmentRentalModal from './EquipmentRentalModal.jsx';
+import EquipmentRentalActivityLoader from './EquipmentRentalActivityLoader.jsx';
 
 const TYPES = ['Tractor', 'Rotavator', 'Harvester', 'Seeder', 'Sprayer', 'Thresher', 'Cultivator', 'Other'];
 const initialFilters = { type: '', district: '', maxDailyRate: '', availableFrom: '', availableTo: '' };
@@ -15,6 +16,7 @@ export default function EquipmentMarketplace({ demoUserId = 'farmer-1', resetVer
   const [items, setItems] = useState([]);
   const [rentals, setRentals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [rentalsLoading, setRentalsLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [showListing, setShowListing] = useState(false);
@@ -32,20 +34,34 @@ export default function EquipmentMarketplace({ demoUserId = 'farmer-1', resetVer
     : (item?.description || '');
 
   const loadRentals = useCallback(async () => {
-    try { const result = await api.getEquipmentRentals(demoUserId); setRentals(result.rentals || []); } catch { setRentals([]); }
+    setRentalsLoading(true);
+    try {
+      const result = await api.getEquipmentRentals(demoUserId);
+      setRentals(result.rentals || []);
+    } catch {
+      setRentals([]);
+    } finally {
+      setRentalsLoading(false);
+    }
   }, [demoUserId]);
 
   const loadEquipment = useCallback(async (nextFilters = filters) => {
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
     try {
       const result = await api.getEquipment(nextFilters, demoUserId);
       setItems(result.items || []);
-      await loadRentals();
     } catch (nextError) {
       setError(nextError.message || t('equipment.unavailable'));
       setItems([]);
-    } finally { setLoading(false); }
-  }, [filters, loadRentals, t, demoUserId]);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, t, demoUserId]);
+
+  const refreshMarketplace = useCallback(async (nextFilters = filters) => {
+    await Promise.allSettled([loadEquipment(nextFilters), loadRentals()]);
+  }, [filters, loadEquipment, loadRentals]);
 
   useEffect(() => {
     setFilters(initialFilters);
@@ -53,18 +69,18 @@ export default function EquipmentMarketplace({ demoUserId = 'farmer-1', resetVer
     setMessage('');
     setShowListing(false);
     setRentTarget(null);
-    loadEquipment(initialFilters);
-  }, [demoUserId, resetVersion]); // reload when farmer changes or Reset demo restores MongoDB equipment data
+    refreshMarketplace(initialFilters);
+  }, [demoUserId, resetVersion, refreshMarketplace]); // reload when farmer changes or Reset demo restores MongoDB equipment data
 
   const flash = (text) => { setMessage(text); window.setTimeout(() => setMessage(''), 3500); };
-  const createListing = async (payload) => { await api.createEquipment(payload, demoUserId); flash(t('equipment.listedSuccess')); await loadEquipment(filters); };
-  const requestRental = async (id, payload) => { await api.rentEquipment(id, payload, demoUserId); flash(t('equipment.rentalSuccess')); await loadEquipment(filters); };
+  const createListing = async (payload) => { await api.createEquipment(payload, demoUserId); flash(t('equipment.listedSuccess')); await refreshMarketplace(filters); };
+  const requestRental = async (id, payload) => { await api.rentEquipment(id, payload, demoUserId); flash(t('equipment.rentalSuccess')); await refreshMarketplace(filters); };
   const removeListing = async (id) => {
     if (!window.confirm(t('equipment.deleteListing'))) return;
-    try { await api.deleteEquipment(id, demoUserId); flash(t('equipment.deletedSuccess')); await loadEquipment(filters); } catch (nextError) { setError(nextError.message); }
+    try { await api.deleteEquipment(id, demoUserId); flash(t('equipment.deletedSuccess')); await refreshMarketplace(filters); } catch (nextError) { setError(nextError.message); }
   };
   const updateRental = async (rentalId, status) => {
-    try { await api.updateEquipmentRental(rentalId, status, demoUserId); flash(t('equipment.statusUpdated')); await loadRentals(); await loadEquipment(filters); } catch (nextError) { setError(nextError.message); }
+    try { await api.updateEquipmentRental(rentalId, status, demoUserId); flash(t('equipment.statusUpdated')); await refreshMarketplace(filters); } catch (nextError) { setError(nextError.message); }
   };
 
   return <section id="equipment-sharing" className="equipment-marketplace">
@@ -83,7 +99,7 @@ export default function EquipmentMarketplace({ demoUserId = 'farmer-1', resetVer
       <label>{t('equipment.maxRate')}<input type="number" min="1" value={filters.maxDailyRate} onChange={(e) => setFilters({ ...filters, maxDailyRate: e.target.value })}/></label>
       <label>{t('equipment.availableFrom')}<input type="date" value={filters.availableFrom} onChange={(e) => setFilters({ ...filters, availableFrom: e.target.value })}/></label>
       <label>{t('equipment.availableTo')}<input type="date" min={filters.availableFrom || undefined} value={filters.availableTo} onChange={(e) => setFilters({ ...filters, availableTo: e.target.value })}/></label>
-      <div className="equipment-filter-actions"><button type="button" className="outline-button" onClick={() => loadEquipment(filters)}>{t('equipment.applyFilters')}</button><button type="button" className="quiet-button" onClick={() => { setFilters(initialFilters); loadEquipment(initialFilters); }}>{t('equipment.clearFilters')}</button></div>
+      <div className="equipment-filter-actions"><button type="button" className="outline-button" onClick={() => refreshMarketplace(filters)}>{t('equipment.applyFilters')}</button><button type="button" className="quiet-button" onClick={() => { setFilters(initialFilters); refreshMarketplace(initialFilters); }}>{t('equipment.clearFilters')}</button></div>
     </div>
 
     {loading ? <div className="equipment-empty">{t('equipment.loading')}</div> : items.length ? <div className="equipment-grid">{items.map((item) => <article className="equipment-card" key={item.id}>
@@ -95,7 +111,7 @@ export default function EquipmentMarketplace({ demoUserId = 'farmer-1', resetVer
       <div className="equipment-card-actions">{item.isOwner ? <><span className="equipment-owner-badge">{t('equipment.yourListing')}</span><button type="button" className="delete-lot-button" onClick={() => removeListing(item.id)}><Trash2 size={14}/>{t('equipment.deleteListing')}</button></> : <button type="button" className="primary-button" onClick={() => setRentTarget(item)}><CircleDollarSign size={16}/>{t('equipment.rent')}</button>}</div>
     </article>)}</div> : <div className="equipment-empty">{t('equipment.empty')}</div>}
 
-    <div className="equipment-rentals-panel"><div className="equipment-rentals-head"><h3>{t('equipment.myRentals')}</h3><span>{rentals.length}</span></div>{rentals.length ? <div className="equipment-rental-list">{rentals.map((rental) => <article key={rental.id} className="equipment-rental-row"><div className="equipment-rental-copy"><small>{rental.role === 'owner' ? t('equipment.incoming') : t('equipment.outgoing')}</small><strong>{rental.equipmentName}</strong><p>{formatDate(rental.startDate)} – {formatDate(rental.endDate)} · {rental.days} {t('equipment.dayShort', { defaultValue: 'd' })} · {money(rental.totalRent)}</p></div><div className="equipment-rental-controls"><span className={`rental-status status-${rental.status}`}>{t(`equipment.statuses.${rental.status}`)}</span><div className="equipment-rental-actions">{rental.role === 'owner' && rental.status === 'requested' && <><button className="rental-action rental-action-approve" type="button" onClick={() => updateRental(rental.id, 'approved')}><CheckCircle2 size={15}/>{t('equipment.approve')}</button><button className="rental-action rental-action-reject" type="button" onClick={() => updateRental(rental.id, 'rejected')}><XCircle size={15}/>{t('equipment.reject')}</button></>}{rental.role === 'owner' && rental.status === 'approved' && <button className="rental-action rental-action-complete" type="button" onClick={() => updateRental(rental.id, 'completed')}><CheckCircle2 size={15}/>{t('equipment.complete')}</button>}{rental.role === 'renter' && ['requested', 'approved'].includes(rental.status) && <button className="rental-action rental-action-cancel" type="button" onClick={() => updateRental(rental.id, 'cancelled')}><XCircle size={15}/>{t('equipment.cancel')}</button>}</div></div></article>)}</div> : <p className="equipment-empty compact">{t('equipment.noRentals')}</p>}</div>
+    <div className="equipment-rentals-panel"><div className="equipment-rentals-head"><h3>{t('equipment.myRentals')}</h3><span>{rentalsLoading ? '' : rentals.length}</span></div>{rentalsLoading ? <EquipmentRentalActivityLoader/> : rentals.length ? <div className="equipment-rental-list">{rentals.map((rental) => <article key={rental.id} className="equipment-rental-row"><div className="equipment-rental-copy"><small>{rental.role === 'owner' ? t('equipment.incoming') : t('equipment.outgoing')}</small><strong>{rental.equipmentName}</strong><p>{formatDate(rental.startDate)} – {formatDate(rental.endDate)} · {rental.days} {t('equipment.dayShort', { defaultValue: 'd' })} · {money(rental.totalRent)}</p></div><div className="equipment-rental-controls"><span className={`rental-status status-${rental.status}`}>{t(`equipment.statuses.${rental.status}`)}</span><div className="equipment-rental-actions">{rental.role === 'owner' && rental.status === 'requested' && <><button className="rental-action rental-action-approve" type="button" onClick={() => updateRental(rental.id, 'approved')}><CheckCircle2 size={15}/>{t('equipment.approve')}</button><button className="rental-action rental-action-reject" type="button" onClick={() => updateRental(rental.id, 'rejected')}><XCircle size={15}/>{t('equipment.reject')}</button></>}{rental.role === 'owner' && rental.status === 'approved' && <button className="rental-action rental-action-complete" type="button" onClick={() => updateRental(rental.id, 'completed')}><CheckCircle2 size={15}/>{t('equipment.complete')}</button>}{rental.role === 'renter' && ['requested', 'approved'].includes(rental.status) && <button className="rental-action rental-action-cancel" type="button" onClick={() => updateRental(rental.id, 'cancelled')}><XCircle size={15}/>{t('equipment.cancel')}</button>}</div></div></article>)}</div> : <p className="equipment-empty compact">{t('equipment.noRentals')}</p>}</div>
 
     {showListing && <EquipmentListingModal onClose={() => setShowListing(false)} onSave={createListing}/>}
     {rentTarget && <EquipmentRentalModal item={rentTarget} onClose={() => setRentTarget(null)} onRent={requestRental}/>}
