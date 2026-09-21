@@ -1260,6 +1260,7 @@ html[lang="ur"] .support-card form input { direction: rtl; text-align: left; }
 .marketplace-buy svg { width: 15px; height: 15px; }
 .marketplace-buy:disabled { opacity: .58; cursor: wait; }
 .marketplace-empty { grid-column: 1 / -1; padding: 17px; text-align: center; color: #75857c; background: #fff; border: 1px dashed #d8e0da; border-radius: 12px; font-size: 11px; }
+.marketplace-listings-loader { grid-column: 1 / -1; min-height: 172px; }
 .marketplace-purchases { margin-top: 20px; }
 .marketplace-subhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .marketplace-subhead h3 { margin: 1px 0 0; color: #315c44; font-size: 14px; font-weight: 600; }

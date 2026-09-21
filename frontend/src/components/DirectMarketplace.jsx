@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, IndianRupee, LockKeyhole, PackageCheck, ShieldCheck, ShoppingCart, Truck } from 'lucide-react';
 import { api } from '../services/api.js';
 import { useTranslation } from 'react-i18next';
+import MarketplaceListingsLoader from './MarketplaceListingsLoader.jsx';
 
 const DEMO_BUYERS = [
   { id: 'buyer-1', name: 'FreshMart Foods' },
@@ -203,7 +204,7 @@ export default function DirectMarketplace({ onChanged, refreshToken = '' }) {
       {notice && <div className="marketplace-notice" role="status">{notice}</div>}
 
       <div className="marketplace-grid">
-        {loading ? <div className="marketplace-empty">{t('marketplace.loading')}</div> : visibleListings.map((listing) => (
+        {loading ? <MarketplaceListingsLoader /> : visibleListings.map((listing) => (
           <article className="marketplace-card" key={listing.id}>
             <div className="marketplace-card-top"><span className="marketplace-crop">{cropLabel(listing.crop)}</span><span className="marketplace-verified"><ShieldCheck size={15}/> {t('marketplace.verifiedFarmer')}</span></div>
             <h3>{varietyLabel(listing)}</h3>
