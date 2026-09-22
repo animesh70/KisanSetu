@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import pageTranslations from './localization/pageTranslations.js';
 import equipmentTranslations from './localization/equipmentTranslations.js';
 import marketplaceTranslations from './localization/marketplaceTranslations.js';
+import routePlannerTranslations from './localization/routePlannerTranslations.js';
 
 export const LANGUAGE_OPTIONS = [
   { code: 'en', locale: 'en-IN', label: 'English' },
@@ -256,6 +257,7 @@ const marketplaceNavLabels = {
 for (const [language, resource] of Object.entries(resources)) {
   resource.translation.nav = { ...resource.translation.nav, marketplace: marketplaceNavLabels[language] || marketplaceNavLabels.en };
   resource.translation.marketplace = marketplaceTranslations[language] || marketplaceTranslations.en;
+  resource.translation.routePlanner = routePlannerTranslations[language] || routePlannerTranslations.en;
   resource.translation.alerts.escrowOtpRequired = language === 'en'
     ? 'This escrow transaction can finish only after the buyer verifies the 4-digit delivery OTP.'
     : `${resource.translation.page.delivery} · OTP · ${resource.translation.page.payment}`;

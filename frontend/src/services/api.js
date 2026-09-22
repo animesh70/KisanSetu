@@ -83,6 +83,7 @@ export const api = {
   respondToOffer: (id, status, counterPrice, message) => request(`/offers/${id}`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ status, counterPrice, message }) }),
   updateTransaction: (id, status, paymentStatus) => request(`/transactions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(paymentStatus ? { paymentStatus } : {}) }) }),
   selectTransactionLogistics: (id, logisticsOptionId) => request(`/transactions/${id}/logistics`, { method: 'PATCH', headers: { 'x-demo-role': 'farmer', 'x-demo-user-id': 'farmer-1' }, body: JSON.stringify({ logisticsOptionId }) }),
+  getTransactionRoutes: (id) => request(`/transactions/${encodeURIComponent(id)}/routes`),
   raiseGrievance: (description) => request('/grievances', { method: 'POST', body: JSON.stringify({ category: 'Transaction support', description, raisedBy: 'farmer-1' }) }),
   resetDemo: () => request('/demo/reset', { method: 'POST' })
 };

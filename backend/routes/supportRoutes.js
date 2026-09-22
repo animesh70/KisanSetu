@@ -5,11 +5,24 @@ import { calculateLogisticsQuote, calculateNetPayable, DEFAULT_TRANSACTION_STORA
 import { isMongooseConfigured } from '../db/mongoose.js';
 import { resetEquipmentDemoData } from '../repositories/equipmentRepository.js';
 import { calculatePayoutSplit } from '../services/platformFeeService.js';
+import { calculateTransactionRoutes } from '../services/routeService.js';
 
 const router = Router();
 router.get('/logistics', (req, res) => res.json(logisticsOptions));
 router.get('/transactions', (req, res) => res.json(transactions));
 const nextStatus = { confirmed: 'pickup_scheduled', pickup_scheduled: 'in_transit', in_transit: 'delivered', delivered: 'completed' };
+
+router.get('/transactions/:id/routes', async (req, res) => {
+  const transaction = transactions.find((item) => item.id === req.params.id);
+  if (!transaction) return res.status(404).json({ message: 'Transaction not found.' });
+  try {
+    return res.json(await calculateTransactionRoutes(transaction));
+  } catch (error) {
+    return res.status(error?.code === 'ROUTE_COORDINATES_UNAVAILABLE' ? 422 : 503).json({
+      error: { code: error?.code || 'ROUTE_UNAVAILABLE', message: error?.message || 'Route planning is temporarily unavailable.' }
+    });
+  }
+});
 
 router.patch('/transactions/:id/logistics', requireRole('farmer', 'fpo', 'buyer', 'admin'), (req, res) => {
   const transaction = transactions.find((item) => item.id === req.params.id);
