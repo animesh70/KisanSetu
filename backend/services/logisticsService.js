@@ -130,79 +130,119 @@ export function haversineDistanceKm(pointA, pointB) {
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
-export function calculateSharedTransportQuote({ requestingLot, nearbyLots = [], logisticsOption } = {}) {
-  const participants = [requestingLot, ...nearbyLots].filter(Boolean);
-  const safeCapacity = positiveNumber(logisticsOption?.capacity);
-  const safeRate = nonNegativeNumber(logisticsOption?.ratePerKm);
-  if (!requestingLot || participants.length < 2 || !safeCapacity || !safeRate) {
-    const solo = requestingLot ? calculateTransportQuote({
-      quantity: requestingLot.quantity,
-      distanceKm: requestingLot.destinationDistanceKm,
-      capacity: safeCapacity,
-      ratePerKm: safeRate
-    }) : { trips: 0, totalCost: 0 };
-    return {
-      shareRecommended: false,
-      reason: participants.length < 2 ? 'NO_NEARBY_LOTS' : 'INVALID_TRANSPORT_OPTION',
-      lotCount: participants.length,
-      totalQuantity: participants.reduce((sum, lot) => sum + positiveNumber(lot.quantity), 0),
-      soloTrips: solo.trips || 0,
-      sharedTrips: 0,
-      estimatedSoloCost: solo.totalCost || 0,
-      estimatedSharedCost: 0,
-      estimatedSavings: 0,
-      requestingLotShare: 0,
-      requestingLotSavings: 0,
-      pickupDetourKm: 0,
-      sharedRouteDistanceKm: 0
-    };
+function transportOptions(options) {
+  return options.filter((option) => option?.type === 'Transport' && option.available !== false
+    && positiveNumber(option.capacity) && positiveNumber(option.ratePerKm));
+}
+
+function lotId(lot) {
+  return String(lot.id || lot.lotId);
+}
+
+// First-fit decreasing keeps whole lots together where possible. A lot larger
+// than the vehicle is split only because a single trip cannot carry it.
+function packTrips(lots, capacity) {
+  const pieces = lots.flatMap((lot) => {
+    const parts = [];
+    let remaining = positiveNumber(lot.quantity);
+    while (remaining > 0) {
+      const quantity = Math.min(remaining, capacity);
+      parts.push({ lot, lotId: lotId(lot), quantity });
+      remaining -= quantity;
+    }
+    return parts;
+  }).sort((a, b) => b.quantity - a.quantity || a.lotId.localeCompare(b.lotId));
+  const groups = [];
+  for (const piece of pieces) {
+    let group = groups.find((item) => item.totalQuantity + piece.quantity <= capacity);
+    if (!group) {
+      group = { totalQuantity: 0, lots: [] };
+      groups.push(group);
+    }
+    group.lots.push(piece);
+    group.totalQuantity += piece.quantity;
   }
+  return groups;
+}
 
-  const totalQuantity = participants.reduce((sum, lot) => sum + positiveNumber(lot.quantity), 0);
-  const soloQuotes = participants.map((lot) => calculateTransportQuote({
-    quantity: lot.quantity,
-    distanceKm: lot.destinationDistanceKm,
-    capacity: safeCapacity,
-    ratePerKm: safeRate
-  }));
-  const estimatedSoloCost = roundMoney(soloQuotes.reduce((sum, quote) => sum + quote.totalCost, 0));
-  const soloTrips = soloQuotes.reduce((sum, quote) => sum + quote.trips, 0);
-  const baseDistanceKm = Math.max(...participants.map((lot) => nonNegativeNumber(lot.destinationDistanceKm)), 0);
-  const pickupDistances = nearbyLots
-    .map((lot) => haversineDistanceKm(requestingLot.pickupPoint, lot.pickupPoint))
-    .filter((distance) => Number.isFinite(distance));
-  const pickupDetourKm = roundMoney(Math.max(0, ...pickupDistances));
-  const sharedRouteDistanceKm = roundMoney(baseDistanceKm + pickupDetourKm);
-  const sharedTrips = totalQuantity ? Math.ceil(totalQuantity / safeCapacity) : 0;
-  const estimatedSharedCost = roundMoney(safeRate * sharedRouteDistanceKm * sharedTrips);
-  const estimatedSavings = roundMoney(Math.max(0, estimatedSoloCost - estimatedSharedCost));
-  const requestingQuantity = positiveNumber(requestingLot.quantity);
-  const requestingLotShare = totalQuantity
-    ? roundMoney(estimatedSharedCost * (requestingQuantity / totalQuantity))
-    : 0;
-  const requestingSoloCost = soloQuotes[0]?.totalCost || 0;
-  const requestingLotSavings = roundMoney(Math.max(0, requestingSoloCost - requestingLotShare));
-  const shareRecommended = estimatedSharedCost < estimatedSoloCost && requestingLotShare < requestingSoloCost;
+function quotePooledTrips(lots, option, requestingId) {
+  const capacity = positiveNumber(option.capacity);
+  const rate = positiveNumber(option.ratePerKm);
+  const tripGroups = packTrips(lots, capacity).map((group, index) => {
+    const anchor = group.lots.find((piece) => piece.lotId === requestingId)?.lot || group.lots[0].lot;
+    const pickupDetourKm = Math.max(0, ...group.lots.map((piece) =>
+      haversineDistanceKm(anchor.pickupPoint, piece.lot.pickupPoint) || 0));
+    const baseDistanceKm = Math.max(0, ...group.lots.map((piece) => nonNegativeNumber(piece.lot.destinationDistanceKm)));
+    const routeDistanceKm = roundMoney(baseDistanceKm + pickupDetourKm);
+    const cost = roundMoney(routeDistanceKm * rate);
+    return {
+      tripNumber: index + 1,
+      capacity,
+      totalQuantity: group.totalQuantity,
+      lots: group.lots.map(({ lotId: id, quantity }) => ({ lotId: id, quantity })),
+      pickupDetourKm: roundMoney(pickupDetourKm),
+      routeDistanceKm,
+      cost
+    };
+  });
+  const estimatedSharedCost = roundMoney(tripGroups.reduce((sum, group) => sum + group.cost, 0));
+  const requestingLotShare = roundMoney(tripGroups.reduce((sum, group) => {
+    const requestingQuantity = group.lots.filter((piece) => piece.lotId === requestingId)
+      .reduce((total, piece) => total + piece.quantity, 0);
+    return sum + (group.totalQuantity ? group.cost * requestingQuantity / group.totalQuantity : 0);
+  }, 0));
+  return { option, tripGroups, estimatedSharedCost, requestingLotShare };
+}
 
+export function calculateSharedTransportQuote({ requestingLot, nearbyLots = [], logisticsOptions, logisticsOption } = {}) {
+  const participants = [requestingLot, ...nearbyLots].filter((lot) => lot && positiveNumber(lot.quantity));
+  const options = transportOptions(logisticsOptions || (logisticsOption ? [logisticsOption] : []));
+  const totalQuantity = roundMoney(participants.reduce((sum, lot) => sum + Number(lot.quantity), 0));
+  const soloQuotes = participants.map((lot) => options.map((option) => ({
+    option,
+    quote: calculateTransportQuote({ quantity: lot.quantity, distanceKm: lot.destinationDistanceKm,
+      capacity: option.capacity, ratePerKm: option.ratePerKm })
+  })).sort((a, b) => a.quote.totalCost - b.quote.totalCost)[0]);
+  const estimatedSoloCost = roundMoney(soloQuotes.reduce((sum, item) => sum + (item?.quote.totalCost || 0), 0));
+  const soloTrips = soloQuotes.reduce((sum, item) => sum + (item?.quote.trips || 0), 0);
+  const requestingSoloCost = soloQuotes[0]?.quote.totalCost || 0;
+  const requestingId = requestingLot ? lotId(requestingLot) : '';
+  const best = requestingLot && participants.length > 1
+    ? options.map((option) => quotePooledTrips(participants, option, requestingId))
+      .sort((a, b) => a.estimatedSharedCost - b.estimatedSharedCost)[0]
+    : null;
+  const estimatedSharedCost = best?.estimatedSharedCost || 0;
+  const requestingLotShare = best?.requestingLotShare || 0;
+  const shareRecommended = Boolean(best && estimatedSharedCost < estimatedSoloCost
+    && requestingLotShare < requestingSoloCost);
   return {
     shareRecommended,
-    reason: shareRecommended ? 'SAVINGS_AVAILABLE' : 'NO_ESTIMATED_SAVINGS',
+    reason: !requestingLot || participants.length < 2 ? 'NO_NEARBY_LOTS'
+      : !best ? 'INVALID_TRANSPORT_OPTION' : shareRecommended ? 'SAVINGS_AVAILABLE' : 'NO_ESTIMATED_SAVINGS',
     lotCount: participants.length,
-    totalQuantity: roundMoney(totalQuantity),
+    totalQuantity,
     soloTrips,
-    sharedTrips,
+    sharedTrips: best?.tripGroups.length || 0,
+    tripGroups: best?.tripGroups || [],
+    transportProvider: best?.option.provider || null,
+    transportOptionId: best?.option.id || null,
+    vehicleCapacity: best?.option.capacity || null,
+    ratePerKm: best?.option.ratePerKm || null,
+    soloQuotes: soloQuotes.map((item, index) => ({ lotId: lotId(participants[index]),
+      provider: item?.option.provider || null, trips: item?.quote.trips || 0, cost: item?.quote.totalCost || 0 })),
     estimatedSoloCost,
+    requestingSoloCost,
     estimatedSharedCost,
-    estimatedSavings,
+    estimatedSavings: shareRecommended ? roundMoney(estimatedSoloCost - estimatedSharedCost) : 0,
     requestingLotShare,
-    requestingLotSavings,
-    pickupDetourKm,
-    sharedRouteDistanceKm
+    requestingLotSavings: shareRecommended ? roundMoney(requestingSoloCost - requestingLotShare) : 0,
+    pickupDetourKm: roundMoney(Math.max(0, ...(best?.tripGroups || []).map((group) => group.pickupDetourKm))),
+    sharedRouteDistanceKm: roundMoney(Math.max(0, ...(best?.tripGroups || []).map((group) => group.routeDistanceKm)))
   };
 }
 
-export function buildSharedLogisticsGroup({ requestingLot, nearbyLots = [], logisticsOption } = {}) {
-  return calculateSharedTransportQuote({ requestingLot, nearbyLots, logisticsOption });
+export function buildSharedLogisticsGroup(options = {}) {
+  return calculateSharedTransportQuote(options);
 }
 
 export { roundMoney };

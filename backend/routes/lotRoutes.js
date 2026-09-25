@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { cropLots, logisticsOptions, mandiPrices, offers } from '../data/sampleData.js';
 import { requireRole } from '../middleware/auth.js';
-import { getMatches } from '../services/matchingService.js';
+import { getMatches, selectAutoOfferMatch } from '../services/matchingService.js';
 import { parseQuantity } from '../services/quantityService.js';
-import { buildSharedLogisticsGroup, getDefaultTransportOption, haversineDistanceKm } from '../services/logisticsService.js';
+import { buildSharedLogisticsGroup, haversineDistanceKm } from '../services/logisticsService.js';
 import {
   canMirrorLot,
   deleteLotGeoBestEffort,
@@ -118,7 +118,7 @@ router.post('/', requireRole('farmer', 'fpo'), async (req, res) => {
   cropLots.push(lot);
   await syncSpatialMirror(lot);
 
-  const bestBuyer = getMatches(lot)[0];
+  const bestBuyer = selectAutoOfferMatch(getMatches(lot), lot.quantity);
   const generatedOffer = bestBuyer && {
     id: `offer-${Date.now() + 1}`,
     lotId: lot.id,
@@ -168,10 +168,11 @@ router.get('/:id/shared-logistics', async (req, res) => {
 
     // The application still uses in-memory lots as its canonical demo state. Ignore
     // any stale Mongo mirror document left from a previous demo process/restart.
-    const canonicalOpenIds = new Set(cropLots.filter((item) => item.status === 'open').map((item) => item.id));
-    const validNearby = nearby.filter((item) => canonicalOpenIds.has(item.lotId));
-    const transportOption = getDefaultTransportOption(logisticsOptions);
-    const group = buildSharedLogisticsGroup({ requestingLot: lot, nearbyLots: validNearby, logisticsOption: transportOption });
+    const canonicalOpenLots = new Map(cropLots.filter((item) => item.status === 'open' && Number(item.quantity) > 0)
+      .map((item) => [item.id, item]));
+    const validNearby = nearby.filter((item) => canonicalOpenLots.has(item.lotId))
+      .map((item) => ({ ...item, ...canonicalOpenLots.get(item.lotId) }));
+    const group = buildSharedLogisticsGroup({ requestingLot: lot, nearbyLots: validNearby, logisticsOptions });
 
     const nearbyLots = validNearby.map((item) => ({
       lotId: item.lotId,

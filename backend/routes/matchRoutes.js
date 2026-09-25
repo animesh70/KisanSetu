@@ -6,6 +6,7 @@ const router = Router();
 router.get('/lots/:lotId', (req, res) => {
   const lot = cropLots.find((item) => item.id === req.params.lotId);
   if (!lot) return res.status(404).json({ message: 'Crop lot not found.' });
+  if (lot.status !== 'open' || Number(lot.quantity) < 1) return res.json([]);
   res.json(getMatches(lot));
 });
 router.get('/sell', async (req, res) => {

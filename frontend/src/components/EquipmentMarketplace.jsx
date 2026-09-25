@@ -45,23 +45,23 @@ export default function EquipmentMarketplace({ demoUserId = 'farmer-1', resetVer
     }
   }, [demoUserId]);
 
-  const loadEquipment = useCallback(async (nextFilters = filters) => {
+  const loadEquipment = useCallback(async (nextFilters) => {
     setLoading(true);
     setError('');
     try {
       const result = await api.getEquipment(nextFilters, demoUserId);
       setItems(result.items || []);
     } catch (nextError) {
-      setError(nextError.message || t('equipment.unavailable'));
+      setError(nextError.message || 'equipment.unavailable');
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [filters, t, demoUserId]);
+  }, [demoUserId]);
 
-  const refreshMarketplace = useCallback(async (nextFilters = filters) => {
+  const refreshMarketplace = useCallback(async (nextFilters) => {
     await Promise.allSettled([loadEquipment(nextFilters), loadRentals()]);
-  }, [filters, loadEquipment, loadRentals]);
+  }, [loadEquipment, loadRentals]);
 
   useEffect(() => {
     setFilters(initialFilters);
@@ -90,7 +90,7 @@ export default function EquipmentMarketplace({ demoUserId = 'farmer-1', resetVer
     </div>
 
     {message && <div className="equipment-message" role="status"><ShieldCheck size={17}/>{message}</div>}
-    {error && <div className="equipment-error" role="alert">{error}</div>}
+    {error && <div className="equipment-error" role="alert">{error === 'equipment.unavailable' ? t(error) : error}</div>}
 
     <div className="equipment-filter-card">
       <div className="equipment-filter-title"><Wrench size={18}/><strong>{t('equipment.filters')}</strong></div>

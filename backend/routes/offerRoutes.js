@@ -5,6 +5,7 @@ import { calculateLogisticsQuote, calculateNetPayable, DEFAULT_TRANSACTION_STORA
 import { calculatePayoutSplit } from '../services/platformFeeService.js';
 import { createEscrowOrder, createOtpRecord, generateDeliveryOtp, getEscrowPublicConfig, isDemoEscrow } from '../services/escrowService.js';
 import { getTradableQuantity } from '../services/quantityService.js';
+import { assertAvailableQuantity, consumeLotInventory, withLotInventoryLock } from '../services/lotInventoryService.js';
 
 const router = Router();
 router.get('/', (req, res) => res.json(offers));
@@ -25,15 +26,21 @@ router.patch('/:id', requireRole('farmer', 'fpo'), async (req, res) => {
   }
   if (req.body.status === 'rejected') offer.status = 'rejected';
   if (req.body.status === 'accepted') {
+    return withLotInventoryLock(offer.lotId, async () => {
+    if (offer.status !== 'pending') return res.status(409).json({ message: 'This offer is no longer pending.' });
     if (transactions.some((item) => item.acceptedOfferId === offer.id)) return res.status(409).json({ message: 'A transaction already exists for this offer.' });
     const buyer = buyers.find((item) => item.id === offer.buyerId);
     const lot = cropLots.find((item) => item.id === offer.lotId);
     if (!buyer || !lot) return res.status(409).json({ message: 'The buyer or crop lot for this offer is no longer available.' });
+    const acceptedPrice = Number(offer.pricePerUnit);
+    if (!Number.isFinite(acceptedPrice) || acceptedPrice <= 0) return res.status(400).json({ message: 'The offer price must be positive.' });
     let trade;
     try {
+      assertAvailableQuantity(lot, Number(offer.quantity));
       trade = getTradableQuantity({ lotQuantity: lot.quantity, buyerRequiredQuantity: buyer.requiredQuantity, requestedQuantity: offer.quantity });
+      if (trade.tradableQuantity !== Number(offer.quantity)) return res.status(409).json({ message: 'The offered quantity is no longer available.' });
     } catch (error) {
-      return res.status(400).json({ message: error.message });
+      return res.status(error.status || 400).json({ message: error.message });
     }
     const logistics = logisticsOptions.find((item) => item.id === req.body.logisticsOptionId);
     const requestedStorageDays = Number(req.body.storageDays);
@@ -44,7 +51,7 @@ router.patch('/:id', requireRole('farmer', 'fpo'), async (req, res) => {
       distanceKm: buyer.distanceKm,
       holdingDays: storageDays
     });
-    const grossAmount = offer.pricePerUnit * trade.tradableQuantity;
+    const grossAmount = acceptedPrice * trade.tradableQuantity;
     const split = calculatePayoutSplit({ grossAmount, logisticsFee: logisticsQuote.totalCost });
     const platformFee = split.platformFee;
     const transactionId = `txn-${Date.now()}`;
@@ -105,6 +112,9 @@ router.patch('/:id', requireRole('farmer', 'fpo'), async (req, res) => {
     offer.tradableQuantity = trade.tradableQuantity;
     offer.remainingQuantity = trade.remainingQuantity;
     transactions.push(transaction);
+    await consumeLotInventory(lot, trade.tradableQuantity, offers);
+    return res.json(offer);
+    });
   }
   res.json(offer);
 });

@@ -78,6 +78,13 @@ export function getMatches(lot, { buyerData = buyers, transportOption = getDefau
     .sort((a, b) => b.matchScore - a.matchScore);
 }
 
+// Automatic demo offers should cover the whole available lot when a ranked
+// full-lot buyer exists; the matching screen still retains partial buyers.
+export function selectAutoOfferMatch(matches, lotQuantity) {
+  return matches.find((match) => match.remainingQuantity === 0
+    && match.tradableQuantity === Number(lotQuantity)) || matches[0] || null;
+}
+
 function getMarketOptions({ crop, quantity, marketData, transportOption }) {
   return marketData
     .filter((item) => cropMatches(item, crop))

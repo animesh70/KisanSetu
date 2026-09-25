@@ -40,6 +40,7 @@ export const transactions = [];
 
 export const logisticsOptions = [
   { id: 'logistics-1', provider: 'Kisan Haul', type: 'Transport', serviceArea: ['Nashik', 'Pune'], capacity: 150, ratePerKm: 12, contact: '9822001100', available: true },
+  { id: 'logistics-2', provider: 'Kisan Haul XL', type: 'Transport', serviceArea: ['Nashik', 'Pune'], capacity: 300, ratePerKm: 15, contact: '9822001100', available: true },
   { id: 'storage-1', provider: 'Nashik Cold Store', type: 'Storage', serviceArea: ['Nashik'], capacity: 300, ratePerDay: 18, contact: '9822002200', available: true }
 ];
 

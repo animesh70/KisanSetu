@@ -13,6 +13,7 @@ import {
 } from '../repositories/lotGeoRepository.js';
 
 const transport = { id: 'transport-test', type: 'Transport', provider: 'Test Haul', capacity: 150, ratePerKm: 12, available: true };
+const largeTransport = { id: 'transport-large', type: 'Transport', provider: 'Test Haul XL', capacity: 300, ratePerKm: 15, available: true };
 const source = {
   id: 'lot-a', farmerId: 'farmer-a', crop: 'Onion', quantity: 80, status: 'open', location: 'Village A',
   pickupPoint: { type: 'Point', coordinates: [74.08, 20.08] }, destinationMandiId: 'mandi-lasalgaon-apmc-nashik-maharashtra', destinationMandiName: 'Lasalgaon APMC', destinationDistanceKm: 28
@@ -67,6 +68,52 @@ test('one lot alone is not recommended for shared freight', () => {
   assert.equal(quote.shareRecommended, false);
   assert.equal(quote.reason, 'NO_NEARBY_LOTS');
   assert.equal(quote.estimatedSavings, 0);
+});
+
+test('100 + 100 selects a cheaper 300 q vehicle using actual trip costs', () => {
+  const quote = buildSharedLogisticsGroup({ requestingLot: { ...source, quantity: 100 },
+    nearbyLots: [{ ...nearby, quantity: 100 }], logisticsOptions: [transport, largeTransport] });
+  assert.equal(quote.transportProvider, 'Test Haul XL');
+  assert.equal(quote.vehicleCapacity, 300);
+  assert.equal(quote.sharedTrips, 1);
+  assert.equal(quote.estimatedSoloCost, 12 * (28 + 30));
+  assert.equal(quote.estimatedSharedCost, quote.tripGroups[0].cost);
+  assert.equal(quote.estimatedSavings, Math.round((quote.estimatedSoloCost - quote.estimatedSharedCost) * 100) / 100);
+  assert.ok(quote.estimatedSavings > 0 && quote.requestingLotSavings > 0);
+  assert.equal(quote.shareRecommended, true);
+});
+
+test('150 q truck never carries 200 q in one trip', () => {
+  const quote = calculateSharedTransportQuote({ requestingLot: { ...source, quantity: 100 },
+    nearbyLots: [{ ...nearby, quantity: 100 }], logisticsOptions: [transport] });
+  assert.equal(quote.sharedTrips, 2);
+  assert.ok(quote.tripGroups.every((group) => group.totalQuantity <= 150));
+  assert.equal(quote.shareRecommended, false);
+  assert.equal(quote.estimatedSavings, 0);
+});
+
+test('four 150 q lots form two capacity-safe 300 q trips', () => {
+  const lots = [source, nearby, { ...nearby, id: 'lot-c', lotId: 'lot-c' },
+    { ...nearby, id: 'lot-d', lotId: 'lot-d' }].map((lot) => ({ ...lot, quantity: 150 }));
+  const quote = buildSharedLogisticsGroup({ requestingLot: lots[0], nearbyLots: lots.slice(1),
+    logisticsOptions: [largeTransport] });
+  assert.equal(quote.sharedTrips, 2);
+  assert.deepEqual(quote.tripGroups.map((group) => group.totalQuantity), [300, 300]);
+  assert.ok(quote.tripGroups.every((group) => group.totalQuantity <= group.capacity));
+});
+
+test('unavailable transport and storage are excluded; uneconomic sharing is truthful', () => {
+  const expensive = { ...largeTransport, ratePerKm: 40 };
+  const quote = buildSharedLogisticsGroup({ requestingLot: { ...source, quantity: 100 },
+    nearbyLots: [{ ...nearby, quantity: 100 }], logisticsOptions: [
+      { ...largeTransport, available: false, ratePerKm: 1 },
+      { ...largeTransport, type: 'Storage', ratePerKm: 1 },
+      transport, expensive
+    ] });
+  assert.equal(quote.transportProvider, transport.provider);
+  assert.equal(quote.shareRecommended, false);
+  assert.equal(quote.estimatedSavings, 0);
+  assert.equal(quote.requestingLotSavings, 0);
 });
 
 test('Mongo geo upsert creates 2dsphere and destination/status indexes without leaking public concerns', async () => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildSellingRecommendation, getMatches, transportPerQuintal } from '../services/matchingService.js';
+import { buildSellingRecommendation, getMatches, selectAutoOfferMatch, transportPerQuintal } from '../services/matchingService.js';
 import { calculateStorageQuote, calculateTransportQuote } from '../services/logisticsService.js';
 import { getTradableQuantity, parseQuantity } from '../services/quantityService.js';
 
@@ -39,6 +39,17 @@ test('partial buyer demand exposes tradable and remaining quantities', () => {
   assert.equal(match.platformFee, 1950);
   assert.equal(match.estimatedNetAmount, 127666);
   assert.equal(getTradableQuantity({ lotQuantity: 50, buyerRequiredQuantity: 120 }).remainingQuantity, 0);
+});
+
+test('automatic demo offer prefers a full 100 q Onion buyer without removing partial matches', () => {
+  const matches = getMatches({ crop: 'Onion', quantity: 100, grade: 'A' });
+  assert.ok(matches.some((match) => match.tradableQuantity === 80 && match.remainingQuantity === 20));
+  const selected = selectAutoOfferMatch(matches, 100);
+  assert.equal(selected.companyName, 'FreshMart Foods');
+  assert.equal(selected.tradableQuantity, 100);
+  assert.equal(selected.remainingQuantity, 0);
+  const partialOnly = matches.filter((match) => match.remainingQuantity > 0);
+  assert.equal(selectAutoOfferMatch(partialOnly, 100), partialOnly[0]);
 });
 
 test('a partial buyer cannot become the full-lot payout recommendation', () => {

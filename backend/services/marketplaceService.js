@@ -1,7 +1,9 @@
-import { buyers, cropLots, logisticsOptions, transactions, users } from '../data/sampleData.js';
+import { buyers, cropLots, logisticsOptions, offers, transactions, users } from '../data/sampleData.js';
 import { calculateLogisticsQuote, getDefaultTransportOption, roundMoney } from './logisticsService.js';
 import { calculatePayoutSplit } from './platformFeeService.js';
 import { createEscrowOrder, createOtpRecord, generateDeliveryOtp, getEscrowPublicConfig, isDemoEscrow } from './escrowService.js';
+import { parseQuantity } from './quantityService.js';
+import { assertAvailableQuantity, consumeLotInventory, withLotInventoryLock } from './lotInventoryService.js';
 
 function publicFarmer(farmerId) {
   const farmer = users.find((user) => user.id === farmerId);
@@ -32,17 +34,15 @@ export function getBuyerPurchases(buyerId) {
 }
 
 export async function createMarketplaceCheckout({ lotId, buyerId, quantity } = {}) {
+  return withLotInventoryLock(lotId, async () => {
   const lot = cropLots.find((item) => item.id === lotId);
   if (!lot || lot.status !== 'open') throw Object.assign(new Error('This listing is no longer available.'), { status: 404 });
   const buyer = buyers.find((item) => item.id === buyerId);
   if (!buyer) throw Object.assign(new Error('Buyer account not found.'), { status: 404 });
-  const requestedQuantity = Number(quantity || lot.quantity);
-  if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0 || requestedQuantity > Number(lot.quantity)) {
-    throw Object.assign(new Error('Enter a quantity within the available listing quantity.'), { status: 400 });
-  }
-  if (transactions.some((item) => item.source === 'direct_marketplace' && item.lotId === lot.id && !['cancelled', 'completed'].includes(item.status))) {
-    throw Object.assign(new Error('This listing already has an active marketplace checkout.'), { status: 409 });
-  }
+  let requestedQuantity;
+  try { requestedQuantity = parseQuantity(quantity === undefined || quantity === null || quantity === '' ? lot.quantity : quantity); }
+  catch (error) { throw Object.assign(error, { status: 400 }); }
+  assertAvailableQuantity(lot, requestedQuantity);
 
   const transportOption = getDefaultTransportOption(logisticsOptions);
   const distanceKm = Number(buyer.distanceKm || lot.destinationDistanceKm || 0);
@@ -100,9 +100,7 @@ export async function createMarketplaceCheckout({ lotId, buyerId, quantity } = {
     auditLog: [{ event: demo ? 'Marketplace checkout created; demo funds locked in escrow' : 'Marketplace checkout created; awaiting Razorpay payment', at: new Date().toISOString() }]
   };
   transactions.push(transaction);
-  if (demo) {
-    if (transaction.remainingQuantity <= 0) lot.status = 'closed';
-    else lot.quantity = transaction.remainingQuantity;
-  }
+  await consumeLotInventory(lot, requestedQuantity, offers);
   return { transaction, payment: { provider: order.provider, orderId: order.orderId, amountPaise: order.amountPaise, razorpayKeyId: getEscrowPublicConfig().razorpayKeyId } };
+  });
 }
