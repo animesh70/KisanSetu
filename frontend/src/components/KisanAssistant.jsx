@@ -1,4 +1,4 @@
-import { Bot, ImagePlus, MessageCircle, Mic, MicOff, Send, Volume2, X } from 'lucide-react';
+import { Bot, ImagePlus, Landmark, MessageCircle, Mic, MicOff, Send, Volume2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
@@ -7,6 +7,7 @@ import { speakText, stopSpeech } from '../services/tts';
 import { getKittyCommand } from '../services/kittyCommands';
 import { createSpeechRecognitionSession, speechRecognitionErrorKey, startRecognitionAfterStoppingPlayback } from '../services/speechRecognitionSession';
 import { cropImageAssistantMessage } from '../services/cropImageResult';
+import { detectEquipmentActivity, detectFarmerType, detectLoanCrop, detectLoanPurpose, isLoanRequest, LOAN_PURPOSES, FARMER_TYPES, officialApplicationUrl, parseLoanAmount } from '../services/loanAssistant';
 
 const hasNumber = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
 const formatPrice = (value) => hasNumber(value) ? `₹${Number(value).toLocaleString('en-IN')}` : null;
@@ -453,6 +454,7 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
   const recognitionSessionRef = useRef(null);
   const voiceSubmittedRef = useRef(true);
   const fileInputRef = useRef(null);
+  const loanFlowRef = useRef(null);
   const suggestions = useMemo(() => {
     const translated = t('assistant.suggestions', { returnObjects: true });
     return Array.isArray(translated) ? translated : [];
@@ -476,9 +478,22 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
     setMessages([]);
     setLastIntent('');
     setInput('');
+    loanFlowRef.current = null;
   }, [context?.resetVersion]);
 
   const messageForCurrentLanguage = (message) => {
+    if (message.source === 'loan') {
+      const kind = message.loanKind;
+      const title = kind === 'results' ? t('loans.results') : kind === 'compare' ? t('loans.compare') : kind === 'prepare' ? t('loans.prepare') : message.loan?.name || t('loans.title');
+      const messageText = kind === 'prompt' ? t(`loans.${message.promptKey}`)
+        : kind === 'results' ? message.recommendations?.length ? `${message.recommendations[0].loan.name}. ${t(`loans.status.${message.recommendations[0].status}`)}. ${t('loans.notice')}` : t('loans.noMatch')
+          : kind === 'compare' ? t('loans.compareIntro')
+            : kind === 'prepare' ? t('loans.prepared')
+              : kind === 'apply' ? t('loans.officialContinue')
+                : kind === 'tenant' ? t('loans.tenantNote')
+                  : kind === 'error' ? t('loans.unavailable') : t('loans.notice');
+      return { ...message, title, message: messageText };
+    }
     if (message.source === 'price' && message.priceResult) {
       const result = message.priceResult;
       return {
@@ -509,7 +524,108 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
     }
   };
 
-  const ask = async (question, forcedIntent = '') => {
+  const appendLoan = (text, reply) => {
+    setMessages((current) => [...current, ...(text ? [{ role: 'farmer', text }] : []), { role: 'assistant', source: 'loan', ...reply }]);
+    setLastIntent('loan');
+    setInput('');
+  };
+
+  const showLoanResults = async (text, flow) => {
+    flow.step = 'results';
+    loanFlowRef.current = flow;
+    try {
+      const response = await api.recommendLoans(flow.profile);
+      flow.recommendations = response.recommendations || [];
+      appendLoan(text, { loanKind: 'results', recommendations: flow.recommendations, profile: { ...flow.profile } });
+    } catch {
+      appendLoan(text, { loanKind: 'error' });
+    }
+  };
+
+  const handleLoanMessage = async (text, choice = null) => {
+    const lower = text.toLocaleLowerCase().trim();
+    if (choice === 'start') loanFlowRef.current = null;
+    if (/^(start (again|over)|restart|reset loan|new loan)$/i.test(lower) || text === t('loans.startOver')) loanFlowRef.current = null;
+    let flow = loanFlowRef.current || { step: 'purpose', profile: {} };
+    if (choice === 'start') { loanFlowRef.current = flow; appendLoan(text, { loanKind: 'prompt', promptKey: 'askPurpose' }); return; }
+    const purpose = LOAN_PURPOSES.includes(choice) ? choice : detectLoanPurpose(text, t);
+    const equipmentActivity = ['tractor', 'other_equipment'].includes(choice) ? choice : detectEquipmentActivity(text, t);
+    const crop = detectLoanCrop(text);
+    const farmerType = FARMER_TYPES.includes(choice) ? choice : detectFarmerType(text, t);
+    const amount = parseLoanAmount(text);
+    if (flow.step === 'results') {
+      const first = flow.recommendations?.[0]?.loan;
+      if (/document|papers|दस्तावेज|दस्तऐवज|ଦସ୍ତାବିଜ|নথি|દસ્તાવેજ|పత్రాలు|ஆவண|دستاویز|documentos|belgeler/iu.test(lower) && first) { appendLoan(text, { loanKind: 'detail', loan: first }); return; }
+      if (/why|eligible|क्यों|कसे|କାହିଁକି|কেন|શા માટે|ఎందుకు|ஏன்|کیوں|por qué|neden/iu.test(lower) && flow.recommendations?.[0]) { appendLoan(text, { loanKind: 'detail', loan: first, evaluation: flow.recommendations[0] }); return; }
+      if (/compare|another|other loan|तुलना|ଅନ୍ୟ|অন্য|બીજી|మరొక|மற்ற|دوسرا|comparar|karşılaştır/iu.test(lower)) { appendLoan(text, { loanKind: 'compare', recommendations: flow.recommendations }); return; }
+      if (/apply|आवेदन|ଅାବେଦନ|আবেদন|અરજી|దరఖాస్తు|விண்ணப்ப|درخواست|solicitar|başvur/iu.test(lower) && first) { appendLoan(text, { loanKind: 'apply', loan: first }); return; }
+      if (/don't own land|do not own land|landless/iu.test(lower)) { appendLoan(text, { loanKind: 'tenant' }); return; }
+      if (farmerType) { flow.profile.farmerType = farmerType; await showLoanResults(text, flow); return; }
+      if (amount) { flow.profile.requestedAmount = amount; await showLoanResults(text, flow); return; }
+      if (purpose) { flow.profile.purpose = purpose; flow.profile.activity = equipmentActivity || undefined; flow.profile.crop = crop || undefined; delete flow.profile.requestedAmount; delete flow.profile.landHoldingAcres; delete flow.profile.age; flow.step = 'amount'; loanFlowRef.current = flow; appendLoan(text, { loanKind: 'prompt', promptKey: 'askAmount' }); return; }
+      if (lower.includes('tenant') || lower.includes('landless')) { appendLoan(text, { loanKind: 'tenant' }); return; }
+      appendLoan(text, { loanKind: 'prompt', promptKey: 'unknown' }); return;
+    }
+    if (flow.step === 'purpose') {
+      if (!purpose) { loanFlowRef.current = flow; appendLoan(text, { loanKind: 'prompt', promptKey: 'askPurpose' }); return; }
+      flow.profile.purpose = purpose;
+      if (crop) flow.profile.crop = crop;
+      if (equipmentActivity) flow.profile.activity = equipmentActivity;
+      flow.step = 'amount';
+      if (amount && /₹|rupee|lakh|lac|crore|\d{4,}/iu.test(text)) flow.profile.requestedAmount = amount;
+    }
+    if (flow.step === 'amount') {
+      if (!flow.profile.requestedAmount && !amount) { loanFlowRef.current = flow; appendLoan(text, { loanKind: 'prompt', promptKey: purpose ? 'askAmount' : 'invalidAmount' }); return; }
+      flow.profile.requestedAmount ||= amount;
+      flow.step = 'farmerType';
+    }
+    if (flow.step === 'farmerType') {
+      if (!farmerType) { loanFlowRef.current = flow; appendLoan(text, { loanKind: 'prompt', promptKey: 'askFarmerType' }); return; }
+      flow.profile.farmerType = farmerType;
+      if (flow.profile.purpose === 'farm_equipment' && !flow.profile.activity) {
+        flow.step = 'equipment';
+        loanFlowRef.current = flow;
+        appendLoan(text, { loanKind: 'prompt', promptKey: 'askEquipment' });
+        return;
+      }
+      if ((flow.profile.purpose === 'farm_equipment' && flow.profile.activity === 'tractor') || (flow.profile.purpose === 'crop_cultivation' && flow.profile.requestedAmount >= 500000)) {
+        flow.step = 'land';
+        loanFlowRef.current = flow;
+        appendLoan(text, { loanKind: 'prompt', promptKey: 'askLand' });
+        return;
+      }
+      else return showLoanResults(text, flow);
+    }
+    if (flow.step === 'equipment') {
+      if (!equipmentActivity) { loanFlowRef.current = flow; appendLoan(text, { loanKind: 'prompt', promptKey: 'askEquipment' }); return; }
+      flow.profile.activity = equipmentActivity;
+      if (equipmentActivity === 'tractor') { flow.step = 'land'; loanFlowRef.current = flow; appendLoan(text, { loanKind: 'prompt', promptKey: 'askLand' }); return; }
+      return showLoanResults(text, flow);
+    }
+    if (flow.step === 'land') {
+      const land = choice === 'unknown' || /not sure|unknown|पता नहीं|माहीत नाही|ଜାଣିନି|জানি না|ખબર નથી|తెలియదు|தெரியாது|معلوم نہیں|no sé|bilmiyorum/iu.test(text) ? null : Number(String(text).replace(',', '.').match(/\d+(?:\.\d+)?/)?.[0]);
+      if (land === null) flow.landUnknown = true;
+      else if (!Number.isFinite(land) || land < 0 || land > 1000000) { loanFlowRef.current = flow; appendLoan(text, { loanKind: 'prompt', promptKey: 'invalidLand' }); return; }
+      else flow.profile.landHoldingAcres = land;
+      if (flow.profile.purpose === 'crop_cultivation' && flow.profile.requestedAmount >= 500000) {
+        flow.step = 'age';
+        loanFlowRef.current = flow;
+        appendLoan(text, { loanKind: 'prompt', promptKey: 'askAge' });
+        return;
+      }
+      else return showLoanResults(text, flow);
+    }
+    if (flow.step === 'age') {
+      const age = Number(String(text).match(/\d+/)?.[0]);
+      if (!Number.isInteger(age) || age < 0 || age > 120) { loanFlowRef.current = flow; appendLoan(text, { loanKind: 'prompt', promptKey: 'invalidAge' }); return; }
+      flow.profile.age = age;
+      return showLoanResults(text, flow);
+    }
+    loanFlowRef.current = flow;
+    appendLoan(text, { loanKind: 'prompt', promptKey: flow.step === 'land' ? 'askLand' : 'askAge' });
+  };
+
+  const ask = async (question, forcedIntent = '', loanChoice = null) => {
     const clean = String(question || input).trim();
     if (!clean) return;
     const kittyCommand = getKittyCommand(clean);
@@ -529,6 +645,14 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
         { role: 'assistant', title: 'KisanSetu', message: reply, action: '', key: '', source: 'kitty' }
       ]);
       setInput('');
+      return;
+    }
+    const otherIntent = resolveLocalizedIntent(clean, lastIntent, context, t);
+    const loanResultFollowUp = /document|papers|why|eligible|compare|another|other loan|apply|start (again|over)|restart|tenant|landless|don't own land|do not own land|दस्तावेज|क्यों|ଆବେଦନ|ঋণ|અરજી|రుణం|கடன்|قرض|préstamo|kredi/iu.test(clean)
+      || Boolean(detectFarmerType(clean, t)) || Boolean(parseLoanAmount(clean)) || Boolean(detectLoanPurpose(clean, t));
+    const loanFollowUp = loanFlowRef.current && (loanFlowRef.current.step !== 'results' ? otherIntent.id === 'help' || otherIntent.id === 'loan' : loanResultFollowUp) && !/\b(rent|rental|hire)\b/iu.test(clean);
+    if (forcedIntent === 'loan' || isLoanRequest(clean, t) || (loanFollowUp && !/predict|forecast|market|mandi|price|photo|logistics|payment|buyer|equipment rental/iu.test(clean))) {
+      await handleLoanMessage(clean, loanChoice);
       return;
     }
     const resolved = forcedIntent ? { id: forcedIntent === 'price' ? 'recommendation' : forcedIntent, followUp: null } : resolveLocalizedIntent(clean, lastIntent, context, t);
@@ -660,9 +784,21 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
       <div className="assistant-messages" aria-live="polite">{messages.length ? messages.map((message, index) => {
         if (message.role === 'farmer') return <p className="assistant-question" key={index}>{message.text}</p>;
         const localized = messageForCurrentLanguage(message);
-        return <article key={index}><strong>{localized.title}</strong><p>{localized.message}</p><div className="assistant-message-actions">{localized.action && <button type="button" onClick={() => onAction(localized.key)}>{localized.action}</button>}<button type="button" className={`speak-button ${speakingMessage === index ? 'active' : ''}`} aria-label={t('assistant.read')} aria-busy={speakingMessage === index} onClick={() => speak(localized.message, index)}><Volume2 size={14}/></button></div></article>;
+        return <article key={index}><strong>{localized.title}</strong><p>{localized.message}</p>{message.source === 'loan' && <div className="loan-message-content">
+          {message.loanKind === 'prompt' && message.promptKey === 'askPurpose' && <div className="loan-choice-grid">{LOAN_PURPOSES.map((purpose) => <button type="button" key={purpose} onClick={() => ask(t(`loans.purpose.${purpose}`), 'loan', purpose)}>{t(`loans.purpose.${purpose}`)}</button>)}</div>}
+          {message.loanKind === 'prompt' && message.promptKey === 'askFarmerType' && <div className="loan-choice-grid">{FARMER_TYPES.map((type) => <button type="button" key={type} onClick={() => ask(t(`loans.farmerType.${type}`), 'loan', type)}>{t(`loans.farmerType.${type}`)}</button>)}</div>}
+          {message.loanKind === 'prompt' && message.promptKey === 'askEquipment' && <div className="loan-choice-grid">{['tractor', 'other_equipment'].map((activity) => <button type="button" key={activity} onClick={() => ask(t(`loans.equipment.${activity === 'other_equipment' ? 'other' : activity}`), 'loan', activity)}>{t(`loans.equipment.${activity === 'other_equipment' ? 'other' : activity}`)}</button>)}</div>}
+          {message.loanKind === 'prompt' && message.promptKey === 'askLand' && <button type="button" onClick={() => ask(t('loans.unsure'), 'loan', 'unknown')}>{t('loans.unsure')}</button>}
+          {message.loanKind === 'results' && <>{message.recommendations?.map((item) => <div className="loan-result-card" key={item.loan.id}><strong>{item.loan.name}</strong><small>{item.loan.bank} · {t(`loans.status.${item.status}`)}</small><span>{t('loans.why')}: {item.matchedCriteria.map((key) => t(`loans.criteria.${key}`)).join(' · ')}</span><span>{t('loans.amount')}: {item.loan.minAmount && item.loan.maxAmount ? `${formatPrice(item.loan.minAmount)}–${formatPrice(item.loan.maxAmount)}` : t('loans.lenderAssessment')}</span><span>{t('loans.rate')}</span><span>{t('loans.commonDocuments')}: {item.loan.documents.slice(0, 3).map((document) => t(`loans.documents.${document}`)).join(' · ')}</span><div className="loan-card-actions"><button type="button" onClick={() => appendLoan(t('loans.checkDetails'), { loanKind: 'detail', loan: item.loan, evaluation: item })}>{t('loans.checkDetails')}</button>{officialApplicationUrl(item.loan) ? <a href={officialApplicationUrl(item.loan)} target="_blank" rel="noopener noreferrer" onClick={() => appendLoan(t('loans.applyOfficially'), { loanKind: 'apply', loan: item.loan })}>{t('loans.applyOfficially')}</a> : <span>{t('loans.branch')}</span>}<a href={item.loan.officialInformationUrl} target="_blank" rel="noopener noreferrer">{t('loans.officialDetails')}</a></div></div>)}{message.recommendations?.length > 1 && <button type="button" onClick={() => appendLoan(t('loans.compare'), { loanKind: 'compare', recommendations: message.recommendations })}>{t('loans.compare')}</button>}</>}
+          {message.loanKind === 'detail' && message.loan && <><span>{t('loans.commonDocuments')} · {t('loans.documentCaution')}</span><ul>{message.loan.documents.map((document) => <li key={document}>{t(`loans.documents.${document}`)}</li>)}</ul>{message.evaluation?.missingInformation?.length > 0 && <span>{t(`loans.status.needs_more_information`)}: {message.evaluation.missingInformation.map((key) => t(`loans.criteria.${key}`, { defaultValue: key })).join(', ')}</span>}<a href={message.loan.officialInformationUrl} target="_blank" rel="noopener noreferrer">{t('loans.officialDetails')}</a><small>{t('loans.source')}: {message.loan.sourceName} · {t('loans.lastChecked')}: {message.loan.lastVerifiedAt}</small><button type="button" onClick={() => appendLoan(t('loans.prepare'), { loanKind: 'prepare', loan: message.loan, profile: { ...loanFlowRef.current?.profile } })}>{t('loans.prepare')}</button></>}
+          {message.loanKind === 'compare' && message.recommendations?.map((item) => <div className="loan-compare-row" key={item.loan.id}><strong>{item.loan.name}</strong><span>{t(`loans.purpose.${item.loan.purposes[0]}`)} · {t(`loans.status.${item.status}`)}</span></div>)}
+          {message.loanKind === 'prepare' && message.loan && <><span>{t('loans.applicant')}: {context?.equipmentDemoUserName || t('page.farmer')}</span><span>{t('loans.purposeLabel')}: {t(`loans.purpose.${message.profile?.purpose}`)}</span><span>{t('loans.requestedAmount')}: {formatPrice(message.profile?.requestedAmount)}</span><span>{t('loans.category')}: {t(`loans.farmerType.${message.profile?.farmerType}`)}</span>{message.profile?.crop && <span>{t('loans.crop')}: {message.profile.crop}</span>}<span>{t('loans.suggestedProduct')}: {message.loan.name}</span><strong>{t('loans.documentsChecklist')}</strong>{message.loan.documents.map((document) => <span key={document}>□ {t(`loans.documents.${document}`)}</span>)}</>}
+          {message.loanKind === 'apply' && message.loan && <a href={message.loan.officialInformationUrl} target="_blank" rel="noopener noreferrer">{t('loans.officialDetails')}</a>}
+          {['results', 'detail', 'compare', 'prepare', 'apply'].includes(message.loanKind) && <small className="loan-notice">{t('loans.notice')}</small>}
+          {message.loanKind !== 'prompt' && <button type="button" onClick={() => ask(t('loans.startOver'), 'loan')}>{t('loans.startOver')}</button>}
+        </div>}<div className="assistant-message-actions">{localized.action && <button type="button" onClick={() => onAction(localized.key)}>{localized.action}</button>}<button type="button" className={`speak-button ${speakingMessage === index ? 'active' : ''}`} aria-label={t('assistant.read')} aria-busy={speakingMessage === index} onClick={() => speak(localized.message, index)}><Volume2 size={14}/></button></div></article>;
       }) : <article><strong>{t('assistant.hello')}</strong><p>{t('assistant.intro')}</p></article>}</div>
-      <div className="assistant-suggestions">{suggestions.map((suggestion, index) => <button type="button" key={suggestion} onClick={() => index === 3 ? fileInputRef.current?.click() : ask(suggestion, ['recommendation', 'price', 'market'][index])}>{suggestion}</button>)}</div>
+      <div className="assistant-suggestions">{suggestions.slice(0, 3).map((suggestion, index) => <button type="button" key={suggestion} onClick={() => ask(suggestion, ['recommendation', 'price', 'market'][index])}>{suggestion}</button>)}<button type="button" className="assistant-loan-suggestion" onClick={() => ask(t('loans.quickAction'), 'loan', 'start')}><Landmark size={12}/><span>{t('loans.quickAction')}</span></button><button type="button" onClick={() => fileInputRef.current?.click()}>{suggestions[3]}</button></div>
       <form onSubmit={(event) => { event.preventDefault(); ask(input); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={t('assistant.placeholder')} aria-label={t('assistant.title')}/><button aria-label={t('page.submit')}><Send size={16}/></button></form>
       <p className="assistant-disclaimer">{t('assistant.disclaimer')}</p>
     </section>}

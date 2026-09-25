@@ -4,6 +4,7 @@ import pageTranslations from './localization/pageTranslations.js';
 import equipmentTranslations from './localization/equipmentTranslations.js';
 import marketplaceTranslations from './localization/marketplaceTranslations.js';
 import routePlannerTranslations from './localization/routePlannerTranslations.js';
+import loanTranslations from './localization/loanTranslations.js';
 
 export const LANGUAGE_OPTIONS = [
   { code: 'en', locale: 'en-IN', label: 'English' },
@@ -239,6 +240,24 @@ for (const [language, page] of Object.entries(pageTranslations)) {
   };
 }
 
+const cropHealthSuggestions = {
+  en: 'Check crop health',
+  hi: 'फसल की सेहत जाँचें',
+  mr: 'पिकाचे आरोग्य तपासा',
+  ur: 'فصل کی صحت جانچیں',
+  tr: 'Ürün sağlığını kontrol et',
+  es: 'Revisar la salud del cultivo',
+  pa: 'ਫਸਲ ਦੀ ਸਿਹਤ ਜਾਂਚੋ',
+  or: 'ଫସଲର ସ୍ୱାସ୍ଥ୍ୟ ଯାଞ୍ଚ କରନ୍ତୁ',
+  bn: 'ফসলের স্বাস্থ্য পরীক্ষা করুন',
+  gu: 'પાકનું સ્વાસ્થ્ય તપાસો',
+  te: 'పంట ఆరోగ్యాన్ని తనిఖీ చేయండి',
+  ta: 'பயிர் ஆரோக்கியத்தைச் சரிபார்க்கவும்'
+};
+
+resources.en.translation.assistant.cropHealthSuggestion = cropHealthSuggestions.en;
+resources.en.translation.assistant.suggestions[3] = cropHealthSuggestions.en;
+
 // Fill every remaining farmer-facing string from the language's translated
 // workflow vocabulary. This prevents partial locales from silently showing
 // English in the hero or assistant while keeping one shared locale choice.
@@ -267,7 +286,8 @@ for (const [language, resource] of Object.entries(resources)) {
   for (const [key, value] of Object.entries(assistantFallbacks)) {
     if (!assistant[key] || assistant[key] === en.assistant[key]) assistant[key] = value;
   }
-  assistant.suggestions = [page.sellNow, page.priceTrend, page.nearbyPrices, assistant.photo];
+  assistant.cropHealthSuggestion = cropHealthSuggestions[language];
+  assistant.suggestions = [page.sellNow, page.priceTrend, page.nearbyPrices, assistant.cropHealthSuggestion];
 }
 
 
@@ -289,6 +309,7 @@ for (const [language, resource] of Object.entries(resources)) {
   resource.translation.nav = { ...resource.translation.nav, marketplace: marketplaceNavLabels[language] || marketplaceNavLabels.en };
   resource.translation.marketplace = marketplaceTranslations[language] || marketplaceTranslations.en;
   resource.translation.routePlanner = routePlannerTranslations[language] || routePlannerTranslations.en;
+  resource.translation.loans = loanTranslations[language] || loanTranslations.en;
   resource.translation.alerts.escrowOtpRequired = language === 'en'
     ? 'This escrow transaction can finish only after the buyer verifies the 4-digit delivery OTP.'
     : `${resource.translation.page.delivery} · OTP · ${resource.translation.page.payment}`;

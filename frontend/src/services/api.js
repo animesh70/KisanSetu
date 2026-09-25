@@ -39,6 +39,10 @@ function equipmentHeaders(demoUserId = 'farmer-1', includeRole = false) {
 }
 
 export const api = {
+  getLoans: () => request('/loans'),
+  getLoan: (id) => request(`/loans/${encodeURIComponent(id)}`),
+  checkLoanEligibility: (loanId, profile) => request('/loans/check-eligibility', { method: 'POST', body: JSON.stringify({ loanId, profile }) }),
+  recommendLoans: (profile) => request('/loans/recommend', { method: 'POST', body: JSON.stringify({ profile }) }),
   getPrices: (crop, district, quantity) => request(`/markets/prices?crop=${encodeURIComponent(crop)}${district ? `&district=${encodeURIComponent(district)}` : ''}${quantity !== undefined && quantity !== '' ? `&quantity=${encodeURIComponent(quantity)}` : ''}`),
   getTrend: (crop) => request(`/markets/trends?crop=${encodeURIComponent(crop)}`),
   getForecast: (crop) => request(`/markets/forecast?crop=${encodeURIComponent(crop)}`),
