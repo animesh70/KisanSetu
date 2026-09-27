@@ -2,6 +2,14 @@ function cleanList(value) {
   return Array.isArray(value) ? value.filter((item) => typeof item === 'string' && item.trim()).map((item) => item.trim()) : [];
 }
 
+export function cropImageUploadLabel(fileName, t) {
+  return `${t('assistant.photo')}: ${fileName}`;
+}
+
+function cropName(crop, t) {
+  return crop ? t(`crops.${crop.toLowerCase()}`, { defaultValue: crop }) : t('assistant.imagePlant');
+}
+
 function detailLines(result, t) {
   const lines = [];
   const observations = cleanList(result?.observations);
@@ -36,7 +44,7 @@ export function cropImageAssistantMessage(result, t) {
   if (result?.imageType === 'harvested_produce') {
     return {
       intent: 'disease',
-      title: `${t('assistant.photo')} · ${result.crop || t('assistant.imageProduce')}`,
+      title: `${t('assistant.photo')} · ${result.crop ? cropName(result.crop, t) : t('assistant.imageProduce')}`,
       message: result.crop === 'Onion' ? t('assistant.imageHarvestedOnion') : t('assistant.imageHarvested'),
       action: '', key: '', source: 'disease'
     };
@@ -45,13 +53,13 @@ export function cropImageAssistantMessage(result, t) {
   if (result?.messageCode === 'UNSUPPORTED_CROP') {
     return {
       intent: 'disease',
-      title: `${t('assistant.photo')} · ${result.crop || t('assistant.imagePlant')}`,
+      title: `${t('assistant.photo')} · ${cropName(result.crop, t)}`,
       message: t('assistant.imageUnsupported'),
       action: '', key: '', source: 'disease'
     };
   }
 
-  const crop = result?.crop || t('assistant.imagePlant');
+  const crop = cropName(result?.crop, t);
   const details = detailLines(result, t);
   let summary;
 
@@ -72,4 +80,10 @@ export function cropImageAssistantMessage(result, t) {
     key: '',
     source: 'disease'
   };
+}
+
+export function localizeStoredCropImageMessage(message, t) {
+  return message.source === 'disease' && message.imageResult
+    ? { ...message, ...cropImageAssistantMessage(message.imageResult, t) }
+    : message;
 }

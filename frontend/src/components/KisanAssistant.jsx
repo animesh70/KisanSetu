@@ -6,7 +6,7 @@ import { getSpeechLocale, LANGUAGE_OPTIONS } from '../i18n';
 import { speakText, stopSpeech } from '../services/tts';
 import { getKittyCommand } from '../services/kittyCommands';
 import { createSpeechRecognitionSession, speechRecognitionErrorKey, startRecognitionAfterStoppingPlayback } from '../services/speechRecognitionSession';
-import { cropImageAssistantMessage } from '../services/cropImageResult';
+import { cropImageUploadLabel, localizeStoredCropImageMessage } from '../services/cropImageResult';
 import { detectEquipmentActivity, detectFarmerType, detectLoanCrop, detectLoanPurpose, isLoanRequest, LOAN_PURPOSES, FARMER_TYPES, officialApplicationUrl, parseLoanAmount } from '../services/loanAssistant';
 
 const hasNumber = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
@@ -482,6 +482,7 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
   }, [context?.resetVersion]);
 
   const messageForCurrentLanguage = (message) => {
+    if (message.source === 'disease') return localizeStoredCropImageMessage(message, t);
     if (message.source === 'loan') {
       const kind = message.loanKind;
       const title = kind === 'results' ? t('loans.results') : kind === 'compare' ? t('loans.compare') : kind === 'prepare' ? t('loans.prepare') : message.loan?.name || t('loans.title');
@@ -760,8 +761,8 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
     try {
       const result = await api.analyzeCropImage(file, context?.filters?.crop);
       setMessages((current) => [...current,
-        { role: 'farmer', text: `${t('assistant.photo')}: ${file.name}` },
-        { role: 'assistant', ...cropImageAssistantMessage(result, t) }
+        { role: 'farmer', source: 'crop-photo', fileName: file.name },
+        { role: 'assistant', source: 'disease', imageResult: result }
       ]);
     } catch (error) {
       setVoiceError(t('assistant.imageAnalysisUnavailable'));
@@ -782,7 +783,7 @@ export default function KisanAssistant({ context, onAction, kittyEnabled, onKitt
       {listening && <p className="assistant-state"><Mic size={13}/>{t('assistant.listening')}</p>}
       {voiceError && <p className="assistant-error" role="alert">{voiceError}</p>}
       <div className="assistant-messages" aria-live="polite">{messages.length ? messages.map((message, index) => {
-        if (message.role === 'farmer') return <p className="assistant-question" key={index}>{message.text}</p>;
+        if (message.role === 'farmer') return <p className="assistant-question" key={index}>{message.source === 'crop-photo' ? cropImageUploadLabel(message.fileName, t) : message.text}</p>;
         const localized = messageForCurrentLanguage(message);
         return <article key={index}><strong>{localized.title}</strong><p>{localized.message}</p>{message.source === 'loan' && <div className="loan-message-content">
           {message.loanKind === 'prompt' && message.promptKey === 'askPurpose' && <div className="loan-choice-grid">{LOAN_PURPOSES.map((purpose) => <button type="button" key={purpose} onClick={() => ask(t(`loans.purpose.${purpose}`), 'loan', purpose)}>{t(`loans.purpose.${purpose}`)}</button>)}</div>}

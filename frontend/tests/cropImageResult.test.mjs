@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cropImageAssistantMessage } from '../src/services/cropImageResult.js';
+import { cropImageAssistantMessage, cropImageUploadLabel, localizeStoredCropImageMessage } from '../src/services/cropImageResult.js';
 
 const strings = {
   'assistant.photo': 'Crop photo',
@@ -20,7 +20,27 @@ const strings = {
   'assistant.imageNextStep': 'Recommended next step',
   'assistant.imageDisclaimer': 'Confirm with an agriculture expert.'
 };
-const t = (key, values = {}) => (strings[key] || key).replace('{{condition}}', values.condition || '');
+const t = (key, values = {}) => (strings[key] || values.defaultValue || key).replace('{{condition}}', values.condition || '');
+
+test('stored crop analysis and upload label can be rendered again in another language', () => {
+  const result = { imageType: 'crop_or_plant', crop: 'Tomato', healthStatus: 'unclear', observations: [], nextStep: null };
+  const odia = (key, values = {}) => ({
+    'assistant.photo': 'ଫସଲ ଫଟୋ',
+    'assistant.imageHealthUnclear': 'ଗଛ ଦେଖାଯାଉଛି, କିନ୍ତୁ ଏହାର ଅବସ୍ଥା ସ୍ପଷ୍ଟ ନୁହେଁ।',
+    'assistant.imageDisclaimer': 'ଯୋଗ୍ୟ କୃଷି ବିଶେଷଜ୍ଞଙ୍କ ସହ ନିଶ୍ଚିତ କରନ୍ତୁ।',
+    'crops.tomato': 'ଟମାଟୋ'
+  }[key] || values.defaultValue || key);
+
+  const stored = { role: 'assistant', source: 'disease', imageResult: result };
+  const english = localizeStoredCropImageMessage(stored, t);
+  const translated = localizeStoredCropImageMessage(stored, odia);
+  assert.equal(english.title, 'Crop photo · Tomato');
+  assert.equal(translated.title, 'ଫସଲ ଫଟୋ · ଟମାଟୋ');
+  assert.match(translated.message, /ଅବସ୍ଥା ସ୍ପଷ୍ଟ ନୁହେଁ/);
+  assert.doesNotMatch(translated.message, /A plant is visible|Image screening is informational/);
+  assert.equal(cropImageUploadLabel('images1.jpg', odia), 'ଫସଲ ଫଟୋ: images1.jpg');
+  assert.equal(localizeStoredCropImageMessage(stored, t).title, english.title);
+});
 
 test('non-crop UI contains no disease, percentage, price wording, or recommendation action', () => {
   const message = cropImageAssistantMessage({
